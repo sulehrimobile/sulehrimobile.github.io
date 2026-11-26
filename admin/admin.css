@@ -285,6 +285,7 @@ tr.low-stock:hover td{background:#FFEDD5}
 .builder-steplabel { display: block; font-family: var(--font-head); font-weight: 800; font-size: 1.02rem; color: var(--navy); margin: 0 0 .55rem; }
 .builder-step1-row { display: flex; gap: .6rem; flex-wrap: wrap; }
 .builder-select { flex: 1 1 320px; width: auto; font-weight: 600; }
+.builder-code-input { flex: 1 1 220px; width: auto; font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; }
 .builder-step1 p { margin: .55rem 0 0; }
 .builder-cols { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; align-items: start; }
 @media(max-width: 900px) { .builder-cols { grid-template-columns: 1fr; } }
@@ -301,3 +302,44 @@ tr.low-stock:hover td{background:#FFEDD5}
 .b-hint { color: var(--slate); text-align: center; padding: 1.1rem .5rem; margin: 0; }
 .b-note { margin-top: .7rem; }
 .b-info p { margin: .3rem 0; }
+
+/* ===== v2.4: builder codes + shortcuts ===== */
+.code-badge { display: inline-block; font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; background: var(--navy); color: #fff; font-size: .72rem; font-weight: 700; letter-spacing: .03em; padding: .08rem .42rem; border-radius: 999px; vertical-align: middle; }
+.shortcut-badge { display: inline-block; background: #FEF3C7; border: 1px solid var(--amber); color: #92400E; font-size: .72rem; font-weight: 700; padding: .08rem .45rem; border-radius: 999px; vertical-align: middle; }
+.b-home-note { background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 12px; padding: .55rem .7rem; font-size: .85rem; margin-bottom: .6rem; display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
+
+/* ===== v2.4: forms (bank row, fields, photos) ===== */
+.field { margin: .55rem 0; }
+.field > label { margin-top: 0; }
+.pr-row { display: flex; gap: .5rem; align-items: center; }
+.pr-row select, .pr-row input { flex: 1; min-width: 0; }
+.pr-row .btn { flex: none; }
+.photo-preview { max-width: 120px; max-height: 120px; border-radius: 12px; object-fit: cover; border: 1px solid var(--line); margin-top: .45rem; }
+.sub-fieldset { border: 1px solid var(--line); border-radius: 12px; padding: .4rem .8rem .8rem; margin: .7rem 0; }
+.sub-fieldset legend { font-weight: 700; color: var(--navy); padding: 0 .4rem; font-size: .92rem; }
+
+/* ===== v2.4: Khata reminders + party card + invoice chips ===== */
+.reminders-card { padding: 1rem 1.1rem; margin-bottom: 1rem; }
+.reminders-card h3 { margin-top: 0; }
+.rem-row { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; padding: .55rem .7rem; border: 1px solid var(--line); border-left: 5px solid var(--amber); border-radius: 10px; margin-bottom: .45rem; background: #FFFBEB; }
+.rem-row.rem-overdue { border-left-color: var(--coral); background: #FFF1F2; }
+.rem-row.rem-today { border-left-color: #EA580C; background: #FFF7ED; }
+.rem-row.rem-soon { border-left-color: var(--amber); }
+.party-card { border: 1px solid var(--line); border-radius: 12px; padding: .75rem .85rem; margin-top: .85rem; background: var(--slate-bg); }
+.party-card .pos-total-row { margin: .5rem 0; }
+#ledInvoiceDetail .party-card { margin: 1rem 0 0; background: var(--white); box-shadow: var(--shadow-sm); }
+#ledInvoiceDetail ul { margin: .25rem 0 .25rem 1.1rem; padding: 0; }
+.chip-btn { display: inline-flex; align-items: center; gap: .25rem; background: #EFF6FF; border: 1px solid var(--blue); color: var(--navy); font-weight: 700; font-size: .8rem; padding: .15rem .55rem; border-radius: 999px; cursor: pointer; }
+.chip-btn:hover { background: #DBEAFE; }
+.chip-btn:active { transform: scale(.96); }
+
+/* ===== v2.4: Registration System (chips + report) ===== */
+.reg-chips { display: flex; gap: .45rem; flex-wrap: wrap; margin-bottom: .8rem; }
+.reg-chip { min-height: 38px; padding: .35rem .85rem; border-radius: 999px; border: 1px solid var(--line); background: var(--white); color: var(--navy); font-weight: 600; cursor: pointer; }
+.reg-chip:hover { border-color: var(--blue); }
+.reg-chip:active { transform: scale(.97); }
+.reg-chip.active { background: var(--navy); border-color: var(--navy); color: #fff; box-shadow: var(--shadow-sm); }
+.reg-report { padding: 1rem 1.1rem; margin-bottom: 1rem; }
+.reg-report h3 { margin: 0; }
+.reg-counts { display: flex; gap: .6rem; flex-wrap: wrap; margin: .6rem 0; }
+.reg-counts .stat-card { flex: 1 1 105px; }

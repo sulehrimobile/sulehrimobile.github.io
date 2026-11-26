@@ -265,17 +265,28 @@
         <div id="repTableWrap" class="table-wrap"></div>
       </section>
 
-      <!-- ============ CUSTOMERS ============ -->
+      <!-- ============ REGISTRATION SYSTEM (Customers) ============ -->
       <section id="mod-customers" class="module" hidden>
         <div class="module-head">
           <input id="cusSearch" type="search" placeholder="Search name, phone, email…" aria-label="Search customers">
           <button id="cusAddBtn" class="btn btn-primary" type="button">➕ Add Customer</button>
         </div>
+        <div class="reg-chips" id="regChips">
+          <button type="button" class="reg-chip active" data-reg-filter="all">Sab</button>
+          <button type="button" class="reg-chip" data-reg-filter="Customer">👤 Customers</button>
+          <button type="button" class="reg-chip" data-reg-filter="Shopkeeper">🏪 Shopkeepers</button>
+          <button type="button" class="reg-chip" data-reg-filter="Technician">🔧 Technicians</button>
+          <button type="button" class="reg-chip" data-reg-filter="Worker">👷 Workers</button>
+          <button type="button" class="reg-chip" data-reg-filter="Online">🌐 Online</button>
+          <button type="button" class="reg-chip" data-reg-filter="Offline">🏪 Offline (Shop)</button>
+        </div>
+        <div class="card reg-report" id="regReport"></div>
         <div id="cusTableWrap" class="table-wrap"></div>
       </section>
 
       <!-- ============ LEDGER ============ -->
       <section id="mod-ledger" class="module" hidden>
+        <div id="ledReminders" class="card reminders-card"></div>
         <div class="pos-grid">
           <div class="card">
             <h3>📒 Khata — Party Ledger</h3>
@@ -284,6 +295,7 @@
             <button id="ledLoadBtn" class="btn btn-ghost btn-block" type="button">Load Ledger</button>
             <p class="pos-total-row">Current Balance Owed <strong id="ledBalance">—</strong></p>
             <button id="ledWaBtn" class="btn btn-whatsapp btn-block" type="button" hidden>📱 WhatsApp Payment Reminder</button>
+            <div id="ledPartyCard"></div>
           </div>
           <div class="card">
             <h3>➕ Add Entry / Record Payment</h3>
@@ -296,11 +308,13 @@
               <label>Due Date <input id="ledDue" type="date"></label>
             </div>
             <label>Reference Note <input id="ledNote" type="text" placeholder="e.g. Payment received — thank you"></label>
+            <div class="field"><label>Invoice No (optional)</label><input id="ledInvoiceNo" type="text" placeholder="e.g. ORD-1001 ya REP-1001"></div>
             <button id="ledAddBtn" class="btn btn-primary btn-block" type="button">Save Entry</button>
             <p id="ledMsg" class="success-text" hidden></p>
           </div>
         </div>
         <div id="ledTableWrap" class="table-wrap"></div>
+        <div id="ledInvoiceDetail"></div>
       </section>
 
       <!-- ============ EXPENSES ============ -->
@@ -309,14 +323,16 @@
           <div class="card">
             <h3>🧾 Add Expense</h3>
             <div class="two-col">
-              <label>Category <select id="expCategory"></select></label>
+              <div><label for="expCategory">Category</label><div class="pr-row"><select id="expCategory"></select><button type="button" class="btn btn-ghost btn-sm" id="expCatAdd" title="Nayi Category Add Karein">➕</button></div></div>
               <label>Date <input id="expDate" type="date"></label>
             </div>
             <label>Description <input id="expDesc" type="text" placeholder="e.g. Shop electricity bill"></label>
             <div class="two-col">
               <label>Amount (PKR) <input id="expAmount" type="number" min="0" step="any"></label>
-              <label>Payment Mode <select id="expMode"></select></label>
+              <div><label for="expMode">Payment Mode</label><div class="pr-row"><select id="expMode"></select><button type="button" class="btn btn-ghost btn-sm" id="expModeAdd" title="Naya Payment Mode Add Karein">➕</button></div></div>
             </div>
+            <div class="field" id="expBankWrap" hidden><label>Bank Account</label><div class="pr-row"><select id="expBank"></select><button type="button" class="btn btn-ghost btn-sm" id="expBankAdd">➕ Bank Add Karein</button></div></div>
+            <div class="field"><label>Invoice / Receipt Photo (optional)</label><input type="file" id="expReceipt" accept="image/*"><img id="expReceiptPreview" class="photo-preview" hidden></div>
             <button id="expAddBtn" class="btn btn-primary btn-block" type="button">Save Expense</button>
             <p id="expMsg" class="success-text" hidden></p>
           </div>
@@ -371,6 +387,8 @@
                 <option value="all">📋 Baqi Saari Lists</option>
               </select>
               <button type="button" class="btn btn-primary" id="bNewListBtn">➕ Nayi List Banayein</button>
+              <input id="bCodeInput" class="builder-code-input" type="text" placeholder="🔎 Code likhein — e.g. D, A2, A2.1">
+              <button type="button" class="btn btn-ghost" id="bCodeGo">Jayein ➡️</button>
             </div>
             <p class="small muted">Step 1 mein list chunein, phir neeche columns mein us ki values add / rename / delete karein. Har change khud save ho jata hai.</p>
           </div>
@@ -487,6 +505,24 @@
         </label>
         <span class="small muted">Photo usi waqt profile mein lag jayegi aur Customers list mein nazar aayegi.</span>
       </div>
+      <div class="two-col">
+        <label>Registration Type <select id="cf_Type"><option>Customer</option><option>Shopkeeper</option><option>Technician</option><option>Worker</option></select></label>
+        <label>Channel <select id="cf_Channel"><option value="Offline">🏪 Offline (Shop Par)</option><option value="Online">🌐 Online</option></select></label>
+      </div>
+      <fieldset class="sub-fieldset">
+        <legend>🛡️ Guarantor (Zamanat Dene Wala)</legend>
+        <div class="two-col">
+          <label>Guarantor Name <input id="cf_GName" type="text"></label>
+          <label>Guarantor Phone <input id="cf_GPhone" type="tel"></label>
+        </div>
+        <div class="photo-row">
+          <img id="cf_GPhotoPreview" class="photo-preview" hidden>
+          <label class="photo-pick">📷 Guarantor ki photo lagayein
+            <input id="cf_GPhotoFile" type="file" accept="image/*">
+          </label>
+          <span class="small muted">Guarantor ki photo us ke profile ke saath mehfooz rahegi.</span>
+        </div>
+      </fieldset>
       <div class="two-col">
         <label>Price Tier <select id="cf_Price_Tier"></select></label>
         <label>Fallback Tier <select id="cf_Fallback_Tier"></select></label>

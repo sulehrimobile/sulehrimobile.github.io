@@ -146,7 +146,7 @@ const MODULES = [
   { id: 'orders', label: 'Orders', icon: '🛍️', roles: ['Owner', 'Manager', 'Staff'] },
   { id: 'returns', label: 'Returns / RMA', icon: '↩️', roles: ACTION_ROLES.getReturns },
   { id: 'repairs', label: 'Repairs', icon: '🔧', roles: ALL_STAFF },
-  { id: 'customers', label: 'Customers', icon: '👥', roles: ACTION_ROLES.getCustomers },
+  { id: 'customers', label: 'Registration System', icon: '📝', roles: ACTION_ROLES.getCustomers },
   { id: 'ledger', label: 'Ledger (Khata)', icon: '📒', roles: ACTION_ROLES.getLedger },
   { id: 'expenses', label: 'Expenses', icon: '💸', roles: ACTION_ROLES.getExpenses },
   { id: 'pnl', label: 'Profit & Loss', icon: '📈', roles: ACTION_ROLES.getPnL },
@@ -212,6 +212,34 @@ function fillSelect(el, values, selected, includeBlank) {
   if (!el) return;
   el.innerHTML = (includeBlank ? '<option value="">— Select —</option>' : '') +
     values.map(v => '<option value="' + esc(v) + '"' + (String(v) === String(selected) ? ' selected' : '') + '>' + esc(v) + '</option>').join('');
+}
+/* Coded variants (Settings builder wale codes): option ke LABEL mein
+   '<code> · <value>' nazar aata hai — sirf admin ki madad ke liye.
+   Option ki VALUE hamesha raw value rehti hai, taake backend aur tamam
+   .value parhne wala code bilkul waisa hi chale jaisa pehle chalta tha.
+   Main/Sub ke codes hamesha FULL list ki position se bante hain (builder
+   se match), baqi lists ke codes diye gaye array ki position se. */
+function codedCodeFor_(group, value, fallbackIndex) {
+  if (group === 'Main_Category' || group === 'Sub_Category') {
+    const full = (state.lists && state.lists[group]) || [];
+    const i = full.indexOf(value);
+    return groupCode_(group) + ((i > -1 ? i : fallbackIndex) + 1);
+  }
+  return groupCode_(group) + (fallbackIndex + 1);
+}
+function fillSelectCoded(el, group, values, selected, includeBlank) {
+  if (!el) return;
+  el.innerHTML = (includeBlank ? '<option value="">— Select —</option>' : '') +
+    values.map((v, i) => {
+      const label = (v === '' || v === null || v === undefined) ? '' : codedCodeFor_(group, v, i) + ' · ' + v;
+      return '<option value="' + esc(v) + '"' + (String(v) === String(selected) ? ' selected' : '') + '>' + esc(label) + '</option>';
+    }).join('');
+}
+/* String-built selects (jo innerHTML se bante hain) ke liye coded options. */
+function codedOptions_(group, values, selected) {
+  return values.map((v, i) =>
+    '<option value="' + esc(v) + '"' + (String(v) === String(selected) ? ' selected' : '') + '>' +
+    esc((v === '' || v === null || v === undefined) ? '' : codedCodeFor_(group, v, i) + ' · ' + v) + '</option>').join('');
 }
 function productName(p) { return ((p.Brand || '') + ' ' + (p.Model || '')).trim() || p.Product_ID; }
 function productById(id) { return state.products.find(p => String(p.Product_ID) === String(id)); }
@@ -1157,7 +1185,7 @@ function productTable(products, opts) {
 /* ========================== 8. POS BILLING ============================== */
 let posLoaded = false;
 async function loadPOS() {
-  fillSelect($('posPayment'), state.lists.Payment_Method, 'Cash', false);
+  fillSelectCoded($('posPayment'), 'Payment_Method', state.lists.Payment_Method, 'Cash', false);
   try { const d = await api('getProducts'); state.products = d.products || []; } catch (e) { toast(e.message, 'error'); }
   if (can('getCustomers')) {
     try {
@@ -1374,7 +1402,7 @@ async function posCheckout() {
 
 /* ========================== 9. INVENTORY ================================ */
 async function loadInventory() {
-  fillSelect($('invCategory'), [''].concat(state.lists.Main_Category), $('invCategory').value || '', false);
+  fillSelectCoded($('invCategory'), 'Main_Category', [''].concat(state.lists.Main_Category), $('invCategory').value || '', false);
   $('invCategory').options[0].textContent = 'All Categories';
   try {
     const d = await api('getProducts', {
@@ -1415,15 +1443,15 @@ const PRODUCT_FIELDS = ['Show_On_Website', 'Main_Category', 'Sub_Category', 'Bra
   'Has_Warranty', 'Warranty_Days', 'Check_Status', 'Added_Date'];
 function fillProductFormSelects(p) {
   const L = state.lists;
-  fillSelect($('pf_Main_Category'), L.Main_Category, p ? p.Main_Category : 'Accessories', false);
-  fillSelect($('pf_Sub_Category'), L.Sub_Category, p ? p.Sub_Category : 'Other', false);
-  fillSelect($('pf_Brand'), L.Brand, p ? p.Brand : 'Other', false);
-  fillSelect($('pf_RAM'), L.RAM, p ? p.RAM : 'N/A', false);
-  fillSelect($('pf_Storage'), L.Storage, p ? p.Storage : 'N/A', false);
-  fillSelect($('pf_PTA_Status'), L.PTA_Status, p ? p.PTA_Status : 'N/A', false);
-  fillSelect($('pf_Network_Status'), L.Network_Status, p ? p.Network_Status : 'N/A', false);
-  fillSelect($('pf_Product_Badge'), L.Product_Badge, p ? p.Product_Badge : 'NONE', false);
-  fillSelect($('pf_Check_Status'), L.Check_Status, p ? p.Check_Status : 'Pending', false);
+  fillSelectCoded($('pf_Main_Category'), 'Main_Category', L.Main_Category, p ? p.Main_Category : 'Accessories', false);
+  fillSelectCoded($('pf_Sub_Category'), 'Sub_Category', L.Sub_Category, p ? p.Sub_Category : 'Other', false);
+  fillSelectCoded($('pf_Brand'), 'Brand', L.Brand, p ? p.Brand : 'Other', false);
+  fillSelectCoded($('pf_RAM'), 'RAM', L.RAM, p ? p.RAM : 'N/A', false);
+  fillSelectCoded($('pf_Storage'), 'Storage', L.Storage, p ? p.Storage : 'N/A', false);
+  fillSelectCoded($('pf_PTA_Status'), 'PTA_Status', L.PTA_Status, p ? p.PTA_Status : 'N/A', false);
+  fillSelectCoded($('pf_Network_Status'), 'Network_Status', L.Network_Status, p ? p.Network_Status : 'N/A', false);
+  fillSelectCoded($('pf_Product_Badge'), 'Product_Badge', L.Product_Badge, p ? p.Product_Badge : 'NONE', false);
+  fillSelectCoded($('pf_Check_Status'), 'Check_Status', L.Check_Status, p ? p.Check_Status : 'Pending', false);
 }
 function openProductModal(p) {
   fillProductFormSelects(p);
@@ -1469,7 +1497,7 @@ function purchaseRowHtml() {
     '<button type="button" class="btn btn-danger btn-sm pur-remove">✕</button>' +
     '<label class="pur-new-model">New Model / Name<input class="pur-model" type="text" placeholder="Only for new products"></label>' +
     '<label class="pur-new-brand">New Brand<input class="pur-brand" type="text" placeholder="e.g. Samsung"></label>' +
-    '<label class="pur-new-cat">New Category<select class="pur-cat">' + state.lists.Main_Category.map(c => '<option>' + esc(c) + '</option>').join('') + '</select></label>' +
+    '<label class="pur-new-cat">New Category<select class="pur-cat">' + codedOptions_('Main_Category', state.lists.Main_Category, state.lists.Main_Category[0]) + '</select></label>' +
     '<label class="pur-new-price">New Sale Price (Guest)<input class="pur-price" type="number" min="0" step="any" value="0"></label>' +
     '</div>';
 }
@@ -1499,8 +1527,8 @@ function updatePurchaseTotal() {
   $('purTotal').textContent = money(total);
 }
 async function loadPurchases() {
-  fillSelect($('purPaymentMode'), state.lists.Payment_Mode, 'Cash', false);
-  fillSelect($('supPayMode'), state.lists.Payment_Mode, 'Cash', false);
+  fillSelectCoded($('purPaymentMode'), 'Payment_Mode', state.lists.Payment_Mode, 'Cash', false);
+  fillSelectCoded($('supPayMode'), 'Payment_Mode', state.lists.Payment_Mode, 'Cash', false);
   try { const d = await api('getProducts'); state.products = d.products || []; } catch (e) { /* rows still work for new products */ }
   if (!$('purItems').children.length) addPurchaseRow();
   updatePurchaseTotal();
@@ -1567,7 +1595,7 @@ async function submitSupplierPayment() {
 
 /* ========================== 11. ORDERS ================================== */
 async function loadOrders() {
-  fillSelect($('ordStatusFilter'), [''].concat(state.lists.Order_Status), $('ordStatusFilter').value || '', false);
+  fillSelectCoded($('ordStatusFilter'), 'Order_Status', [''].concat(state.lists.Order_Status), $('ordStatusFilter').value || '', false);
   $('ordStatusFilter').options[0].textContent = 'All Statuses';
   try {
     const d = await api('getOrders', { Order_Status: $('ordStatusFilter').value || undefined });
@@ -1586,7 +1614,7 @@ async function loadOrders() {
           // sessions by the backend — never part of any customer view.
           '<td>' + (o.Net_Profit !== undefined ? money(o.Net_Profit) : '—') + '</td>' +
           '<td>' + esc(o.Payment_Method) + '</td>' +
-          '<td><select data-order-status="' + esc(o.Order_ID) + '">' + state.lists.Order_Status.map(s => '<option' + (s === o.Order_Status ? ' selected' : '') + '>' + esc(s) + '</option>').join('') + '</select></td>' +
+          '<td><select data-order-status="' + esc(o.Order_ID) + '">' + codedOptions_('Order_Status', state.lists.Order_Status, o.Order_Status) + '</select></td>' +
           '<td><button type="button" class="btn btn-ghost btn-sm" data-order-invoice="' + esc(o.Order_ID) + '">🧾 Invoice</button></td></tr>';
       }).join('') + '</tbody></table>';
     wrap.querySelectorAll('[data-order-status]').forEach(sel => sel.addEventListener('change', async () => {
@@ -1603,8 +1631,8 @@ async function loadOrders() {
 
 /* ========================== 12. RETURNS / RMA =========================== */
 async function loadReturns() {
-  fillSelect($('retAction'), state.lists.RMA_Action, 'Refund', false);
-  fillSelect($('retCondition'), state.lists.Stock_Condition, 'Resellable', false);
+  fillSelectCoded($('retAction'), 'RMA_Action', state.lists.RMA_Action, 'Refund', false);
+  fillSelectCoded($('retCondition'), 'Stock_Condition', state.lists.Stock_Condition, 'Resellable', false);
   try {
     const pd = await api('getProducts'); state.products = pd.products || [];
     fillSelect($('retProductSel'), state.products.map(p => p.Product_ID), '', false);
@@ -1656,9 +1684,9 @@ async function submitReturn() {
 
 /* ========================== 13. REPAIRS ================================= */
 async function loadRepairs() {
-  fillSelect($('repStageFilter'), [''].concat(state.lists.Current_Stage), $('repStageFilter').value || '', false);
+  fillSelectCoded($('repStageFilter'), 'Repair_Stage', [''].concat(state.lists.Current_Stage), $('repStageFilter').value || '', false);
   $('repStageFilter').options[0].textContent = 'All Stages';
-  fillSelect($('rc_Type'), state.lists.Repair_Type, 'Hardware', false);
+  fillSelectCoded($('rc_Type'), 'Repair_Type', state.lists.Repair_Type, 'Hardware', false);
   try {
     const d = await api('getRepairs', { search: $('repSearch').value.trim(), Current_Stage: $('repStageFilter').value || undefined });
     state.repairs = d.repairs || [];
@@ -1732,10 +1760,8 @@ function renderRepairDrawer() {
     '<dt>Issue</dt><dd>' + esc(r.Reported_Issue) + '</dd>' +
     '<dt>Received</dt><dd>' + fmtDate(r.Date_Received) + ' • Updated ' + fmtDate(r.Last_Updated) + '</dd>' +
     '<dt>Portal Pass</dt><dd>' + esc(r.Default_Portal_Pass) + '</dd></dl>';
-  h += '<label>Current Stage <select id="rdStage">' + state.lists.Current_Stage.map(s =>
-    '<option' + (s === r.Current_Stage ? ' selected' : '') + '>' + esc(s) + '</option>').join('') + '</select></label>';
-  h += '<label>Customer Communication <select id="rdComm">' + state.lists.Customer_Comm_Status.map(s =>
-    '<option' + (s === r.Customer_Comm_Status ? ' selected' : '') + '>' + esc(s) + '</option>').join('') + '</select></label>';
+  h += '<label>Current Stage <select id="rdStage">' + codedOptions_('Repair_Stage', state.lists.Current_Stage, r.Current_Stage) + '</select></label>';
+  h += '<label>Customer Communication <select id="rdComm">' + codedOptions_('Customer_Comm_Status', state.lists.Customer_Comm_Status, r.Customer_Comm_Status) + '</select></label>';
   h += '<label>Internal Notes (staff only) <input id="rdNotes" type="text" value="' + esc(r.Internal_Notes || '') + '"></label>';
   if (!isTech) {
     h += '<div class="two-col"><label>Service Charges (PKR) <input id="rdService" type="number" min="0" step="any" value="' + num(r.Service_Charges) + '"></label>' +
@@ -1760,7 +1786,7 @@ function renderRepairDrawer() {
     '<dt>Balance Due</dt><dd>' + money(r.Balance_Due) + '</dd></div></div>';
   if (canPay) {
     h += '<div class="two-col"><label>Payment Amount (PKR) <input id="rdPayAmount" type="number" min="0" step="any"></label>' +
-      '<label>Payment Mode <select id="rdPayMode">' + state.lists.Payment_Mode.map(m => '<option>' + esc(m) + '</option>').join('') + '</select></label></div>' +
+      '<label>Payment Mode <select id="rdPayMode">' + codedOptions_('Payment_Mode', state.lists.Payment_Mode, state.lists.Payment_Mode[0]) + '</select></label></div>' +
       '<button type="button" class="btn btn-primary btn-block" id="rdPayBtn">💰 Record Payment</button>';
   }
   h += '<div class="btn-row" style="margin-top:.8rem">' +
@@ -1825,15 +1851,30 @@ function replaceRepair(updated) {
   if (i > -1) state.repairs[i] = updated;
 }
 
-/* ========================== 14. CUSTOMERS =============================== */
+/* ==================== 14. REGISTRATION SYSTEM (Customers) ================= */
+let regFilter = 'all';
+let regPeriod = 'all';
+let customerGuarantorPhotoData = null;
+function personType_(c) { return c.Person_Type || (c.Price_Tier === 'Shopkeeper' ? 'Shopkeeper' : 'Customer'); }
+function regFilterMatch_(c) {
+  if (regFilter === 'all') return true;
+  if (regFilter === 'Online' || regFilter === 'Offline') return (c.Channel || 'Offline') === regFilter;
+  return personType_(c) === regFilter;
+}
 async function loadCustomers() {
   try {
     const d = await api('getCustomers', { search: $('cusSearch').value.trim() });
     state.customers = d.customers || [];
-    const wrap = $('cusTableWrap');
-    if (!state.customers.length) { wrap.innerHTML = '<p class="empty-msg">No customers found.</p>'; return; }
-    wrap.innerHTML = '<table><thead><tr><th>ID</th><th>Customer</th><th>Tier</th><th>Target / Month Spend</th><th>Credit Limit</th><th>Balance Owed</th><th>Due Date</th><th>Status</th><th>Actions</th></tr></thead><tbody>' +
-      state.customers.map(c => '<tr><td>' + esc(c.Customer_ID) + '</td>' +
+    renderCustomers();
+    renderRegReport_();
+  } catch (e) { toast(e.message, 'error'); }
+}
+function renderCustomers() {
+  const wrap = $('cusTableWrap');
+  const list = state.customers.filter(regFilterMatch_);
+  if (!list.length) { wrap.innerHTML = '<p class="empty-msg">No customers found.</p>'; return; }
+  wrap.innerHTML = '<table><thead><tr><th>ID</th><th>Customer</th><th>Tier</th><th>Target / Month Spend</th><th>Credit Limit</th><th>Balance Owed</th><th>Due Date</th><th>Status</th><th>Actions</th></tr></thead><tbody>' +
+      list.map(c => '<tr><td>' + esc(c.Customer_ID) + '</td>' +
         '<td class="wrap"><span class="cust-cell">' + custAvatar_(c) + '<span><b>' + esc(c.Name) + '</b><br><span class="small muted">' + esc(c.Phone) + ' • ' + esc(c.Email) + '</span></span></span></td>' +
         '<td><span class="pill blue">' + esc(c.Price_Tier) + '</span><br><span class="small muted">fallback ' + esc(c.Fallback_Tier) + '</span></td>' +
         '<td>' + money(c.Monthly_Target) + ' / ' + money(c.Current_Month_Spend) + '</td>' +
@@ -1853,7 +1894,47 @@ async function loadCustomers() {
       if (!confirm('Deactivate customer ' + id + '? (Soft delete — the record stays, Status becomes Inactive.)')) return;
       try { await queueWrite('deleteCustomer', { Customer_ID: id }); toast('Customer deactivated.', 'success'); loadCustomers(); } catch (e) {}
     }));
-  } catch (e) { toast(e.message, 'error'); }
+}
+function renderRegReport_() {
+  const box = $('regReport');
+  if (!box) return;
+  const today = dayKey_(new Date());
+  const monthKey = today.slice(0, 7);
+  const weekStart = dayKey_(daysAgoISO(6));
+  let noDate = 0;
+  state.customers.forEach(c => { if (!dayKey_(c.Registered_Date)) noDate++; });
+  const inPeriod = c => {
+    const k = dayKey_(c.Registered_Date);
+    if (!k) return regPeriod === 'all';
+    if (regPeriod === 'today') return k === today;
+    if (regPeriod === '7d') return k >= weekStart && k <= today;
+    if (regPeriod === 'month') return k.slice(0, 7) === monthKey;
+    return true;
+  };
+  const rows = state.customers.filter(inPeriod);
+  const count = fn => rows.filter(fn).length;
+  let h = '<div class="module-head"><h3>📊 Registration Report</h3>' +
+    '<label class="inline-label">Period <select id="regPeriod">' +
+    [['today', 'Aaj'], ['7d', 'Pichle 7 Din'], ['month', 'Is Maah'], ['all', 'All Time']].map(o =>
+      '<option value="' + o[0] + '"' + (regPeriod === o[0] ? ' selected' : '') + '>' + o[1] + '</option>').join('') +
+    '</select></label></div>';
+  h += '<div class="reg-counts">' +
+    statCard('Total', rows.length) +
+    statCard('👤 Customers', count(c => personType_(c) === 'Customer')) +
+    statCard('🏪 Shopkeepers', count(c => personType_(c) === 'Shopkeeper')) +
+    statCard('🔧 Technicians', count(c => personType_(c) === 'Technician')) +
+    statCard('👷 Workers', count(c => personType_(c) === 'Worker')) +
+    statCard('🌐 Online', count(c => (c.Channel || 'Offline') === 'Online')) +
+    statCard('🏪 Offline (Shop)', count(c => (c.Channel || 'Offline') === 'Offline')) + '</div>';
+  if (noDate) h += '<p class="small muted">' + noDate + ' purane records ki registration date nahi hai — ye sirf <b>All Time</b> mein ginay jate hain.</p>';
+  const days = lastDays_(14);
+  const perDay = {};
+  state.customers.forEach(c => { const k = dayKey_(c.Registered_Date); if (k) perDay[k] = (perDay[k] || 0) + 1; });
+  h += '<h4>📈 Rozana Registrations — Pichle 14 Din</h4>' +
+    lineChartSVG_(days.map(k => k.slice(5)), days.map(k => perDay[k] || 0), '#0B2A5B');
+  box.innerHTML = h;
+  const sel = $('regPeriod');
+  if (sel) sel.addEventListener('change', () => { regPeriod = sel.value; renderRegReport_(); });
 }
 function ledgerReminderText(c) {
   return 'Assalam-o-Alaikum ' + (c.Name || '') + ', a friendly payment reminder from ' + CONFIG.SHOP_NAME + '.\n' +
@@ -1864,9 +1945,9 @@ function ledgerReminderText(c) {
 const CUSTOMER_FIELDS = ['Name', 'Phone', 'Email', 'Reference_By', 'Photo_Drive_URL', 'Price_Tier',
   'Fallback_Tier', 'Monthly_Target', 'Credit_Limit', 'Payment_Due_Date', 'Status'];
 function openCustomerModal(c) {
-  fillSelect($('cf_Price_Tier'), state.lists.Price_Tier, c ? c.Price_Tier : 'Retail', false);
-  fillSelect($('cf_Fallback_Tier'), state.lists.Price_Tier, c ? c.Fallback_Tier : 'Guest', false);
-  fillSelect($('cf_Status'), state.lists.Customer_Status, c ? c.Status : 'Active', false);
+  fillSelectCoded($('cf_Price_Tier'), 'Price_Tier', state.lists.Price_Tier, c ? c.Price_Tier : 'Retail', false);
+  fillSelectCoded($('cf_Fallback_Tier'), 'Price_Tier', state.lists.Price_Tier, c ? c.Fallback_Tier : 'Guest', false);
+  fillSelectCoded($('cf_Status'), 'Customer_Status', state.lists.Customer_Status, c ? c.Status : 'Active', false);
   $('customerModalTitle').textContent = c ? 'Edit Customer — ' + c.Customer_ID : 'Add Customer';
   $('cf_Customer_ID').value = c ? c.Customer_ID : '';
   $('cf_Password').value = '';
@@ -1878,6 +1959,17 @@ function openCustomerModal(c) {
   const pf = $('cf_PhotoFile'); if (pf) pf.value = '';
   const pv = $('cf_PhotoPreview');
   if (pv) { const t = c ? driveThumb_(c.Photo_Drive_URL) : ''; pv.hidden = !t; if (t) pv.src = t; }
+  // Registration type / channel / guarantor (v2.4)
+  const typeSel = $('cf_Type');
+  if (typeSel) typeSel.value = c ? (c.Person_Type || (c.Price_Tier === 'Shopkeeper' ? 'Shopkeeper' : 'Customer')) : 'Customer';
+  const chSel = $('cf_Channel');
+  if (chSel) chSel.value = (c && c.Channel) || 'Offline';
+  const gName = $('cf_GName'); if (gName) gName.value = c ? (c.Guarantor_Name || '') : '';
+  const gPhone = $('cf_GPhone'); if (gPhone) gPhone.value = c ? (c.Guarantor_Phone || '') : '';
+  customerGuarantorPhotoData = null;
+  const gf = $('cf_GPhotoFile'); if (gf) gf.value = '';
+  const gp = $('cf_GPhotoPreview');
+  if (gp) { const t = c ? driveThumb_(c.Guarantor_Photo_URL) : ''; gp.hidden = !t; if (t) gp.src = t; else gp.removeAttribute('src'); }
   $('customerError').hidden = true;
   $('customerModal').hidden = false;
 }
@@ -1896,6 +1988,15 @@ async function submitCustomerForm(ev) {
   const pw = $('cf_Password').value;
   if (pw) payload.password = pw;
   if (customerPhotoData) { payload.photoBase64 = customerPhotoData.base64; payload.photoContentType = customerPhotoData.type; }
+  // Registration type / channel / guarantor (v2.4)
+  if ($('cf_Type')) payload.Person_Type = $('cf_Type').value;
+  if ($('cf_Channel')) payload.Channel = $('cf_Channel').value;
+  if ($('cf_GName')) payload.Guarantor_Name = $('cf_GName').value.trim();
+  if ($('cf_GPhone')) payload.Guarantor_Phone = $('cf_GPhone').value.trim();
+  if (customerGuarantorPhotoData) {
+    payload.guarantorPhotoBase64 = customerGuarantorPhotoData.base64;
+    payload.guarantorPhotoContentType = customerGuarantorPhotoData.type;
+  }
   try {
     await queueWrite('saveCustomer', payload);
     $('customerModal').hidden = true;
@@ -1906,10 +2007,156 @@ async function submitCustomerForm(ev) {
 
 /* ========================== 15. LEDGER ================================== */
 async function loadLedgerModule() {
-  fillSelect($('ledPartyType'), state.lists.Party_Type, $('ledPartyType').value || 'Customer', false);
-  fillSelect($('ledType'), state.lists.Ledger_Type, 'Credit', false);
-  fillSelect($('ledMode'), state.lists.Payment_Mode, 'Cash', false);
+  fillSelectCoded($('ledPartyType'), 'Party_Type', state.lists.Party_Type, $('ledPartyType').value || 'Customer', false);
+  fillSelectCoded($('ledType'), 'Ledger_Type', state.lists.Ledger_Type, 'Credit', false);
+  fillSelectCoded($('ledMode'), 'Payment_Mode', state.lists.Payment_Mode, 'Cash', false);
   refreshLedgerPartyOptions();
+  loadReminders_();
+}
+
+/* ---------- Khata: payment reminders (due date alerts) ---------- */
+async function loadReminders_() {
+  const box = $('ledReminders');
+  if (!box) return;
+  try {
+    const d = await api('getLedger', {});
+    const entries = d.entries || [];
+    if (!state.customers.length && can('getCustomers')) {
+      try { const cd = await api('getCustomers'); state.customers = cd.customers || []; } catch (e) {}
+    }
+    const byParty = {};
+    entries.forEach(e => {
+      const key = String(e.Party_Type || '') + '|' + String(e.Party_ID || '');
+      if (!byParty[key]) byParty[key] = { type: e.Party_Type, id: e.Party_ID, latest: null, latestKey: '', dueKey: '' };
+      const g = byParty[key];
+      const dk = dayKey_(e.Date);
+      if (!g.latest || dk >= g.latestKey) { g.latest = e; g.latestKey = dk; }
+      const due = dayKey_(e.Due_Date);
+      if (due && due > g.dueKey) g.dueKey = due;
+    });
+    const today = dayKey_(new Date());
+    const todayMs = new Date(today + 'T00:00:00').getTime();
+    const rows = [];
+    Object.keys(byParty).forEach(key => {
+      const g = byParty[key];
+      const balance = g.latest ? num(g.latest.Balance_After) : 0;
+      if (balance <= 0 || !g.dueKey) return;
+      const diff = Math.round((new Date(g.dueKey + 'T00:00:00').getTime() - todayMs) / 86400000);
+      if (diff > 3) return;
+      const cust = g.type === 'Customer' ? customerById(g.id) : null;
+      let cls, label, rank;
+      if (diff < 0) { cls = 'rem-overdue'; label = Math.abs(diff) + ' din late'; rank = 0; }
+      else if (diff === 0) { cls = 'rem-today'; label = 'Aaj last date'; rank = 1; }
+      else { cls = 'rem-soon'; label = diff + ' din baqi'; rank = 2; }
+      rows.push({
+        key: key, cls: cls, rank: rank, diff: diff,
+        name: cust ? cust.Name : String(g.id),
+        balance: balance, due: g.dueKey, label: label
+      });
+    });
+    rows.sort((a, b) => (a.rank - b.rank) || (a.diff - b.diff));
+    if (!rows.length) {
+      box.innerHTML = '<h3>⏰ Payment Reminders</h3><p class="empty-msg">✅ Koi payment reminder nahi — sab clear hai.</p>';
+      return;
+    }
+    box.innerHTML = '<h3>⏰ Payment Reminders</h3>' + rows.map(r =>
+      '<div class="rem-row ' + r.cls + '"><span class="grow"><b>' + esc(r.name) + '</b> — ' + money(r.balance) +
+      ' — Due: ' + fmtDate(r.due) + ' (<b>' + esc(r.label) + '</b>)</span>' +
+      '<button type="button" class="btn btn-ghost btn-sm" data-rem-party="' + esc(r.key) + '">Khata Kholein</button></div>').join('');
+    box.querySelectorAll('[data-rem-party]').forEach(b => b.addEventListener('click', () =>
+      openReminderParty_(b.getAttribute('data-rem-party'))));
+  } catch (e) { /* reminders are best-effort — module phir bhi chalta rahe */ }
+}
+async function openReminderParty_(key) {
+  const parts = String(key || '').split('|');
+  const type = parts[0], id = parts.slice(1).join('|');
+  if (!id) return;
+  $('ledPartyType').value = type;
+  await refreshLedgerPartyOptions();
+  const sel = $('ledPartySel');
+  if (!Array.from(sel.options).some(o => String(o.value) === String(id))) {
+    const opt = document.createElement('option');
+    opt.value = id; opt.textContent = id;
+    sel.appendChild(opt);
+  }
+  sel.value = id;
+  loadLedger();
+}
+
+/* ---------- Khata: party card (customer + guarantor) ---------- */
+function guarantorAvatar_(name, photoUrl) {
+  const t = driveThumb_(photoUrl);
+  if (t) return '<img class="cust-avatar" src="' + esc(t) + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">';
+  return '<span class="cust-avatar cust-initial">' + esc((name || '?').trim().charAt(0).toUpperCase() || '?') + '</span>';
+}
+function renderLedgerPartyCard_() {
+  const box = $('ledPartyCard');
+  if (!box) return;
+  const p = state.ledgerParty;
+  if (!p || !p.id) { box.innerHTML = ''; return; }
+  const balance = num(p.balance);
+  if (p.type === 'Customer') {
+    const cust = customerById(p.id);
+    if (!cust) { box.innerHTML = ''; return; }
+    let h = '<div class="party-card"><div class="cust-cell">' + custAvatar_(cust) +
+      '<span><b>' + esc(cust.Name) + '</b><br><span class="small muted">' + esc(cust.Phone) + '</span></span>' +
+      '<span class="grow"></span><span class="pill blue">' + esc(cust.Price_Tier) + '</span></div>' +
+      '<p class="pos-total-row">Balance <strong>' + money(balance) + '</strong></p>';
+    if (cust.Guarantor_Name) {
+      h += '<div class="cust-cell">' + guarantorAvatar_(cust.Guarantor_Name, cust.Guarantor_Photo_URL) +
+        '<span>🛡️ <b>Guarantor:</b> ' + esc(cust.Guarantor_Name) + (cust.Guarantor_Phone ? ' — ' + esc(cust.Guarantor_Phone) : '') + '</span></div>';
+    } else {
+      h += '<p class="small muted">🛡️ Guarantor: koi nahi</p>';
+    }
+    if (can('saveCustomer')) h += '<button type="button" class="btn btn-ghost btn-sm" id="ledGuarantorEdit">✏️ Guarantor / Photo Edit</button>';
+    box.innerHTML = h + '</div>';
+    const eb = $('ledGuarantorEdit');
+    if (eb) eb.addEventListener('click', () => openCustomerModal(customerById(p.id)));
+  } else {
+    box.innerHTML = '<div class="party-card"><b>🏭 Supplier: ' + esc(p.name || p.id) + '</b>' +
+      '<p class="pos-total-row">Balance <strong>' + money(balance) + '</strong></p></div>';
+  }
+}
+
+/* ---------- Khata: invoice auto-attach (ORD-/REP- number se detail) ---------- */
+let ledInvoiceCache = null;
+async function findInvoice_(no) {
+  const q = String(no || '').trim().toUpperCase();
+  if (!q) return null;
+  if (!ledInvoiceCache) {
+    const res = await Promise.all([
+      api('getOrders', {}).catch(() => ({ orders: [] })),
+      api('getRepairs', {}).catch(() => ({ repairs: [] }))
+    ]);
+    ledInvoiceCache = { orders: res[0].orders || [], repairs: res[1].repairs || [] };
+  }
+  const o = ledInvoiceCache.orders.find(x => String(x.Order_ID || '').toUpperCase() === q);
+  if (o) {
+    const cust = customerById(o.Customer_ID);
+    return { kind: 'Order', id: o.Order_ID, name: o.Customer_Name || (cust ? cust.Name : ''), amount: num(o.Total_Amount), status: o.Order_Status || '', items: parseItems(o.Items_JSON) };
+  }
+  const r = ledInvoiceCache.repairs.find(x => String(x.Job_ID || '').toUpperCase() === q);
+  if (r) return { kind: 'Repair', id: r.Job_ID, name: r.Customer_Name || '', amount: num(r.Total_Amount), status: r.Current_Stage || '', items: [] };
+  return null;
+}
+async function showInvoiceDetail_(id) {
+  const box = $('ledInvoiceDetail');
+  if (!box) return;
+  const inv = await findInvoice_(id);
+  if (!inv) {
+    box.innerHTML = '<div class="card party-card"><b>🔗 ' + esc(id) + '</b><p class="small muted">Invoice detail nahi mili.</p></div>';
+    return;
+  }
+  let h = '<div class="card party-card"><div class="cust-cell"><b>🔗 ' + esc(inv.kind) + ' — ' + esc(inv.id) + '</b><span class="grow"></span>' +
+    '<button type="button" class="btn btn-ghost btn-sm" id="ledInvClose">✕ Band Karein</button></div>' +
+    '<p class="small">Customer: <b>' + esc(inv.name || '—') + '</b> • Amount: <b>' + money(inv.amount) + '</b> • Status: <b>' + esc(inv.status || '—') + '</b></p>';
+  if (inv.kind === 'Order' && inv.items.length) {
+    h += '<p class="small muted">Items:</p><ul class="small">' + inv.items.map(i =>
+      '<li>' + esc(((i.Brand || '') + ' ' + (i.Model || '')).trim() || i.Product_ID || 'Item') + ' ×' + num(i.Qty) + '</li>').join('') + '</ul>';
+  }
+  box.innerHTML = h + '</div>';
+  const cb = $('ledInvClose');
+  if (cb) cb.addEventListener('click', () => { box.innerHTML = ''; });
 }
 async function refreshLedgerPartyOptions() {
   const type = $('ledPartyType').value;
@@ -1936,20 +2183,31 @@ async function loadLedger() {
   try {
     const d = await api('getLedger', { Party_Type: type, Party_ID: id });
     state.ledger = d.entries || [];
-    state.ledgerParty = { type: type, id: id };
+    state.ledgerParty = { type: type, id: id, balance: num(d.balance) };
     $('ledBalance').textContent = d.balance === null || d.balance === undefined ? '—' : money(d.balance);
     const cust = type === 'Customer' ? customerById(id) : null;
     state.ledgerParty.name = cust ? cust.Name : id;
     state.ledgerParty.phone = cust ? cust.Phone : '';
     $('ledWaBtn').hidden = !(cust && cust.Phone && num(d.balance) > 0);
+    renderLedgerPartyCard_();
     const wrap = $('ledTableWrap');
     wrap.innerHTML = state.ledger.length ?
       '<table><thead><tr><th>Entry</th><th>Date</th><th>Type</th><th>Mode</th><th>Amount</th><th>Balance After</th><th>Due Date</th><th>Note</th><th>By</th></tr></thead><tbody>' +
-      state.ledger.map(e => '<tr><td>' + esc(e.Entry_ID) + '</td><td>' + fmtDate(e.Date) + '</td>' +
-        '<td><span class="pill ' + (e.Type === 'Debit' ? 'amber' : 'green') + '">' + esc(e.Type) + '</span></td>' +
-        '<td>' + esc(e.Payment_Mode) + '</td><td>' + money(e.Amount) + '</td><td><b>' + money(e.Balance_After) + '</b></td>' +
-        '<td>' + fmtDate(e.Due_Date) + '</td><td class="wrap">' + esc(e.Reference_Note) + '</td><td>' + esc(e.Entered_By) + '</td></tr>').join('') +
+      state.ledger.map(e => {
+        const note = String(e.Reference_Note || '');
+        const im = note.match(/^Invoice:\s*([A-Za-z0-9-]+)/);
+        const noteHtml = im
+          ? '<button type="button" class="chip-btn" data-inv="' + esc(im[1]) + '">🔗 ' + esc(im[1]) + '</button>' + esc(note.slice(im[0].length))
+          : esc(note);
+        return '<tr><td>' + esc(e.Entry_ID) + '</td><td>' + fmtDate(e.Date) + '</td>' +
+          '<td><span class="pill ' + (e.Type === 'Debit' ? 'amber' : 'green') + '">' + esc(e.Type) + '</span></td>' +
+          '<td>' + esc(e.Payment_Mode) + '</td><td>' + money(e.Amount) + '</td><td><b>' + money(e.Balance_After) + '</b></td>' +
+          '<td>' + fmtDate(e.Due_Date) + '</td><td class="wrap">' + noteHtml + '</td><td>' + esc(e.Entered_By) + '</td></tr>';
+      }).join('') +
       '</tbody></table>' : '<p class="empty-msg">No ledger entries for this party yet.</p>';
+    wrap.querySelectorAll('[data-inv]').forEach(b => b.addEventListener('click', () =>
+      showInvoiceDetail_(b.getAttribute('data-inv'))));
+    loadReminders_();
   } catch (e) { toast(e.message, 'error'); }
 }
 async function submitLedgerEntry() {
@@ -1960,13 +2218,23 @@ async function submitLedgerEntry() {
   const amount = num($('ledAmount').value);
   if (!id) { toast('Load a party ledger first.', 'error'); return; }
   if (amount <= 0) { toast('Enter an amount greater than 0.', 'error'); return; }
+  let note = $('ledNote').value.trim();
+  const invNo = $('ledInvoiceNo') ? $('ledInvoiceNo').value.trim() : '';
+  if (invNo) {
+    const inv = await findInvoice_(invNo);
+    let ref = 'Invoice: ' + invNo.toUpperCase();
+    if (inv) ref += ' | ' + inv.name + ' | ' + money(inv.amount);
+    else toast('Invoice ' + invNo + ' nahi mila — sirf number save ho raha hai', 'error');
+    note = ref + (note ? ' — ' + note : '');
+  }
   const payload = {
     Party_Type: type, Party_ID: id, Type: $('ledType').value,
     Payment_Mode: $('ledMode').value, Amount: amount,
-    Reference_Note: $('ledNote').value.trim()
+    Reference_Note: note
   };
   if ($('ledDue').value) payload.Due_Date = $('ledDue').value;
   $('ledAmount').value = ''; $('ledNote').value = '';
+  if ($('ledInvoiceNo')) $('ledInvoiceNo').value = '';
   try {
     const d = await queueWrite('addLedgerEntry', payload);
     msg.textContent = '✅ Entry ' + d.Entry_ID + ' saved. New balance owed: ' + money(d.Balance_After);
@@ -1982,9 +2250,71 @@ function ledgerWhatsApp() {
 }
 
 /* ========================== 16. EXPENSES ================================ */
+let expReceiptData = null;
+function bankAccountValues_() {
+  const rows = state.settingsAll.Bank_Account;
+  if (Array.isArray(rows) && rows.length) return settingsRows('Bank_Account').map(r => r.value);
+  return state.lists.Bank_Account || [];
+}
+function fillExpBank_(selected) {
+  const el = $('expBank');
+  if (!el) return;
+  fillSelectCoded(el, 'Bank_Account', bankAccountValues_(), selected !== undefined ? selected : el.value, true);
+  el.options[0].textContent = '— Bank account chunein —';
+}
+function syncExpBank_() {
+  const wrap = $('expBankWrap');
+  if (!wrap) return;
+  const isBank = $('expMode').value === 'Bank';
+  wrap.hidden = !isBank;
+  if (isBank) fillExpBank_();
+}
+async function refreshSettingsLists_() {
+  try {
+    const d = await api('getSettingsAll');
+    state.settingsAll = d.settings || {};
+    applyListsFromSettings(state.settingsAll);
+  } catch (e) { /* purani lists se kaam chala lein */ }
+}
+async function expAddSettingValue_(group, promptText, selEl) {
+  const v = prompt(promptText);
+  if (!v || !v.trim()) return;
+  const value = v.trim();
+  try {
+    await queueWrite('saveSetting', { op: 'add', Group: group, Value: value });
+    toast('Added "' + value + '".', 'success');
+    await refreshSettingsLists_();
+    const vals = (state.lists[group] || []).slice();
+    if (vals.indexOf(value) === -1) vals.push(value);
+    fillSelectCoded(selEl, group, vals, value, false);
+    if (group === 'Payment_Mode') syncExpBank_();
+  } catch (e) {}
+}
+async function expAddBank_() {
+  const bank = prompt('Bank ka naam (e.g. Meezan Bank):');
+  if (!bank || !bank.trim()) return;
+  const title = prompt('Account Title (khata kis ke naam par hai):');
+  if (title === null) return;
+  const number = prompt('Account Number / IBAN:');
+  if (number === null) return;
+  const value = [bank.trim(), title.trim(), number.trim()].filter(Boolean).join(' — ');
+  try {
+    await queueWrite('saveSetting', { op: 'add', Group: 'Bank_Account', Value: value });
+    toast('🏦 Bank account add ho gaya.', 'success');
+    await refreshSettingsLists_();
+    fillExpBank_(value);
+  } catch (e) {}
+}
+function clearExpReceipt_() {
+  expReceiptData = null;
+  const f = $('expReceipt'); if (f) f.value = '';
+  const pv = $('expReceiptPreview');
+  if (pv) { pv.hidden = true; pv.removeAttribute('src'); }
+}
 async function loadExpenses() {
-  fillSelect($('expCategory'), state.lists.Expense_Category, $('expCategory').value || 'Misc', false);
-  fillSelect($('expMode'), state.lists.Payment_Mode, 'Cash', false);
+  fillSelectCoded($('expCategory'), 'Expense_Category', state.lists.Expense_Category, $('expCategory').value || 'Misc', false);
+  fillSelectCoded($('expMode'), 'Payment_Mode', state.lists.Payment_Mode, 'Cash', false);
+  syncExpBank_();
   if (!$('expDate').value) $('expDate').value = todayISO();
   try {
     const d = await api('getExpenses', { thisMonthOnly: true });
@@ -1992,7 +2322,10 @@ async function loadExpenses() {
     $('expMonthTotal').textContent = money(state.expenses.reduce((s, x) => s + num(x.Amount), 0));
     $('expTableWrap').innerHTML = state.expenses.length ?
       '<table><thead><tr><th>Date</th><th>Category</th><th>Description</th><th>Amount</th><th>Mode</th><th>By</th></tr></thead><tbody>' +
-      state.expenses.map(x => '<tr><td>' + fmtDate(x.Date) + '</td><td>' + esc(x.Category) + '</td><td class="wrap">' + esc(x.Description) + '</td><td>' + money(x.Amount) + '</td><td>' + esc(x.Payment_Mode) + '</td><td>' + esc(x.Entered_By) + '</td></tr>').join('') +
+      state.expenses.map(x => '<tr><td>' + fmtDate(x.Date) + '</td><td>' + esc(x.Category) + '</td><td class="wrap">' + esc(x.Description) +
+        (x.Bank_Detail ? '<br><span class="small muted">🏦 ' + esc(x.Bank_Detail) + '</span>' : '') +
+        (x.Receipt_Photo_URL ? '<br><img class="cust-avatar" src="' + esc(driveThumb_(x.Receipt_Photo_URL)) + '" alt="🧾 Receipt" title="Receipt photo" loading="lazy" onerror="this.style.display=\'none\'">' : '') +
+        '</td><td>' + money(x.Amount) + '</td><td>' + esc(x.Payment_Mode) + '</td><td>' + esc(x.Entered_By) + '</td></tr>').join('') +
       '</tbody></table>' : '<p class="empty-msg">No expenses this month.</p>';
   } catch (e) { toast(e.message, 'error'); }
 }
@@ -2001,15 +2334,20 @@ async function submitExpense() {
   msg.hidden = true;
   const amount = num($('expAmount').value);
   if (amount <= 0) { toast('Enter an expense amount.', 'error'); return; }
+  if (!$('expDate').value) $('expDate').value = todayISO();
+  const mode = $('expMode').value;
   const payload = {
     Category: $('expCategory').value, Date: $('expDate').value || undefined,
-    Description: $('expDesc').value.trim(), Amount: amount, Payment_Mode: $('expMode').value
+    Description: $('expDesc').value.trim(), Amount: amount, Payment_Mode: mode,
+    Bank_Detail: mode === 'Bank' ? ($('expBank').value || '') : ''
   };
+  if (expReceiptData) { payload.photoBase64 = expReceiptData.base64; payload.photoContentType = expReceiptData.type; }
   $('expDesc').value = ''; $('expAmount').value = '';
   try {
     await queueWrite('addExpense', payload);
     msg.textContent = '✅ Expense saved.';
     msg.hidden = false;
+    clearExpReceipt_();
     loadExpenses();
   } catch (e) { toast(e.message, 'error'); }
 }
@@ -2069,7 +2407,7 @@ async function loadBanners() {
   } catch (e) { toast(e.message, 'error'); }
 }
 function openBannerModal(b) {
-  fillSelect($('bf_Target_Category'), state.lists.Main_Category, b ? b.Target_Category : 'Phones', false);
+  fillSelectCoded($('bf_Target_Category'), 'Main_Category', state.lists.Main_Category, b ? b.Target_Category : 'Phones', false);
   $('bannerModalTitle').textContent = b ? 'Edit Banner — ' + b.Banner_ID : 'Add Banner';
   $('bf_Banner_ID').value = b ? b.Banner_ID : '';
   $('bf_Section_Title').value = b ? (b.Section_Title || '') : '';
@@ -2134,7 +2472,7 @@ const GROUP_LABELS = {
   RAM: 'RAM Options', Storage: 'Storage Options', PTA_Status: 'PTA Status Options',
   Network_Status: 'Network Status Options', Repair_Stage: 'Repair Stages',
   Customer_Comm_Status: 'Repair Communication Statuses', Product_Badge: 'Product Badges',
-  Expense_Category: 'Expense Categories', Price_Tier: 'Price Tiers',
+  Expense_Category: 'Expense Categories', Price_Tier: 'Price Tiers', Bank_Account: 'Bank Accounts',
   Payment_Method: 'Order Payment Methods', Payment_Mode: 'Ledger Payment Modes',
   Role: 'Staff Roles', Order_Status: 'Order Statuses', Sale_Channel: 'Sale Channels',
   Repair_Type: 'Repair Types', Party_Type: 'Ledger Party Types', Ledger_Type: 'Ledger Entry Types',
@@ -2156,6 +2494,16 @@ async function loadSettingsModule() {
   if (nlBtn && !nlBtn.getAttribute('data-wired')) {
     nlBtn.setAttribute('data-wired', '1');
     nlBtn.addEventListener('click', createSettingsList);
+  }
+  const codeGo = $('bCodeGo');
+  if (codeGo && !codeGo.getAttribute('data-wired')) {
+    codeGo.setAttribute('data-wired', '1');
+    codeGo.addEventListener('click', () => { const inp = $('bCodeInput'); jumpToCode_(inp ? inp.value : ''); });
+  }
+  const codeIn = $('bCodeInput');
+  if (codeIn && !codeIn.getAttribute('data-wired')) {
+    codeIn.setAttribute('data-wired', '1');
+    codeIn.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); jumpToCode_(codeIn.value); } });
   }
   const cols = $('bCols');
   if (cols && !cols.getAttribute('data-wired')) {
@@ -2218,6 +2566,91 @@ const BUILDER_PAGE_INFO = {
   'page-accessories': 'Accessories page ke filters aur product form mein.'
 };
 function groupLabel_(g) { return GROUP_LABELS[g] || String(g).replace(/_/g, ' '); }
+
+/* ---------- Builder codes: har list ka unique code + shortcut nishan ---------- */
+const GROUP_CODES = {
+  Main_Category: 'A', Sub_Category: 'B', Category_L3: 'C', Brand: 'D', RAM: 'E', Storage: 'F',
+  PTA_Status: 'G', Network_Status: 'H', Price_Tier: 'I', Payment_Method: 'J', Payment_Mode: 'K',
+  Expense_Category: 'L', Bank_Account: 'M', Repair_Stage: 'N', Order_Status: 'O', Sale_Channel: 'P',
+  Product_Badge: 'Q', Customer_Comm_Status: 'R', Repair_Type: 'S', Party_Type: 'T', Ledger_Type: 'U',
+  Check_Status: 'V', Section_Order: 'W', Role: 'X', System: 'Y', Drive_Folder: 'Z'
+};
+function groupCode_(g) {
+  if (GROUP_CODES[g]) return GROUP_CODES[g];
+  const unreg = Object.keys(state.settingsAll).filter(x => !GROUP_CODES[x]);
+  const i = unreg.indexOf(g);
+  return 'Z' + (1 + (i < 0 ? unreg.length : i));
+}
+function codeBadge_(code) { return code ? '<span class="code-badge">' + esc(code) + '</span> ' : ''; }
+/* Code quick-jump: Step 1 mein code likho (D, A2, A2.1, B3, Z1…) aur
+   builder seedha usi list / category par le jata hai. */
+function jumpToCode_(raw) {
+  const code = String(raw || '').trim().toUpperCase();
+  const m = code.match(/^([A-Z])(\d+)?(?:\.(\d+))?(?:\.(\d+))?$/);
+  if (!m) { toast('Code samajh nahi aaya — e.g. D, A2, A2.1 likhein', 'error'); return; }
+  const letter = m[1];
+  const n1 = m[2] ? parseInt(m[2], 10) : 0;
+  const n2 = m[3] ? parseInt(m[3], 10) : 0;
+  // Letter → group. Z-codes pehle check karein: 'Z1', 'Z2'… builder ki
+  // unregistered (khud banayi hui) lists hain; sirf 'Z' = Drive_Folder.
+  let group = '';
+  if (letter === 'Z' && n1 >= 1) {
+    const unreg = Object.keys(state.settingsAll).filter(x => !GROUP_CODES[x]);
+    if (unreg[n1 - 1]) group = unreg[n1 - 1];
+  }
+  if (!group) group = Object.keys(GROUP_CODES).find(g => GROUP_CODES[g] === letter) || '';
+  if (!group) { toast('Code "' + code + '" ki koi list nahi mili.', 'error'); return; }
+  if (group === 'Category_L3') {
+    toast('Mazeed Categories kisi Sub ke neeche hoti hain — pehle Categories mein wo Sub chunein', 'error');
+    return;
+  }
+  if (group === 'Main_Category') {
+    bState.mode = 'categories';
+    if (n1 >= 1) {
+      const mains = settingsRows('Main_Category');
+      if (mains[n1 - 1]) {
+        bState.main = mains[n1 - 1].value;
+        bState.sub = '';
+        if (n2 >= 1) {
+          const subs = builderSubItems_(bState.main);
+          if (subs[n2 - 1]) bState.sub = subs[n2 - 1].row.value;
+        }
+      } else { toast('Main Category #' + n1 + ' mojood nahi.', 'error'); return; }
+    }
+  } else if (group === 'Sub_Category') {
+    bState.mode = 'categories';
+    if (n1 >= 1) {
+      const subs = settingsRows('Sub_Category');
+      const row = subs[n1 - 1];
+      if (!row) { toast('Sub Category #' + n1 + ' mojood nahi.', 'error'); return; }
+      const parent = subParent_(row, builderProductMap_(), builderMainSet_());
+      bState.main = parent || '__none__';
+      bState.sub = row.value;
+    }
+  } else {
+    bState.mode = 'all';
+    bState.group = group;
+  }
+  const modeSel = $('bMode');
+  if (modeSel) modeSel.value = bState.mode;
+  renderBuilder();
+  toast('Code ' + code + ' par aa gaye ✅');
+}
+function bHomeNoteHtml_(group) {
+  const code = groupCode_(group);
+  if (bState.mode === 'categories') {
+    return '<div class="b-home-note">✅ Ye Asli Sub Categories hain (Code ' + code + ') — nayi sub category yahin add karein.</div>';
+  }
+  if (BUILDER_PAGE_LISTS[bState.mode]) {
+    if (group === 'Sub_Category') {
+      return '<div class="b-home-note">🔗 Ye Shortcut hai — asli list 🏷️ Categories mein hai (Code ' + code + '). Nayi entry wahan add karein. ' +
+        '<button type="button" class="btn btn-ghost btn-sm" data-b-jump="categories">➡️ Asli List Par Jayein</button></div>';
+    }
+    return '<div class="b-home-note">🔗 Ye Shortcut hai — asli list 📋 Baqi Saari Lists mein hai (Code ' + code + '). ' +
+      '<button type="button" class="btn btn-ghost btn-sm" data-b-jump="all">➡️ Asli List Par Jayein</button></div>';
+  }
+  return '<div class="b-home-note">✅ Ye Asli List hai (Code ' + code + ') — nayi entries yahin add karein.</div>';
+}
 function builderMainSet_() {
   const s = {};
   settingsRows('Main_Category').forEach(m => { s[m.value] = 1; });
@@ -2260,15 +2693,15 @@ function bActionBtns_(group, item, items, li, canEdit) {
     '<button type="button" class="btn btn-ghost btn-sm icon-btn" title="Rename" aria-label="Rename" data-b-rename="' + esc(item.row.value) + '" data-b-group="' + esc(group) + '">✏️</button>' +
     '<button type="button" class="btn btn-danger btn-sm icon-btn" title="Delete" aria-label="Delete" data-b-del="' + esc(item.row.value) + '" data-b-group="' + esc(group) + '">🗑</button>';
 }
-function bValueRowsHtml_(group, items, canEdit, hideNotes) {
+function bValueRowsHtml_(group, items, canEdit, hideNotes, codeFn) {
   return items.map((item, li) =>
-    '<div class="b-row"><span class="grow">' + esc(item.row.value) +
+    '<div class="b-row"><span class="grow">' + codeBadge_(codeFn ? codeFn(item, li) : '') + esc(item.row.value) +
     (!hideNotes && item.row.notes ? ' <span class="muted small">— ' + esc(item.row.notes) + '</span>' : '') + '</span>' +
     bActionBtns_(group, item, items, li, canEdit) + '</div>').join('');
 }
-function bSelRow_(kind, group, item, items, li, selected, canEdit, extraLabel) {
+function bSelRow_(kind, group, item, items, li, selected, canEdit, extraLabel, code) {
   return '<div class="b-row b-sel' + (selected ? ' selected' : '') + '" data-b-sel="' + kind + '" data-b-value="' + esc(item.row.value) + '">' +
-    '<span class="grow">' + esc(item.row.value) + (extraLabel || '') + '</span>' +
+    '<span class="grow">' + codeBadge_(code) + esc(item.row.value) + (extraLabel || '') + '</span>' +
     bActionBtns_(group, item, items, li, canEdit) + '</div>';
 }
 function bAddHtml_(group, placeholder, notes) {
@@ -2320,6 +2753,19 @@ function builderClick_(e) {
   if (del) { settingsDeleteConfirm_(del.getAttribute('data-b-group'), del.getAttribute('data-b-del')); return; }
   const add = t.closest('[data-b-add]');
   if (add) { builderAdd_(add); return; }
+  const jump = t.closest('[data-b-jump]');
+  if (jump) {
+    if (jump.getAttribute('data-b-jump') === 'categories') {
+      bState.mode = 'categories';
+      const mains = settingsRows('Main_Category');
+      bState.main = mains.some(m => m.value === 'Phones') ? 'Phones' : (mains.length ? mains[0].value : '');
+      bState.sub = '';
+    } else {
+      bState.mode = 'all'; // bState.group pehle se wahi group hai — asli list wahan khul jayegi
+    }
+    renderBuilder();
+    return;
+  }
   const sel = t.closest('[data-b-sel]');
   if (sel) {
     const kind = sel.getAttribute('data-b-sel');
@@ -2344,9 +2790,13 @@ function renderBuilderCategories_(c1, c2, c3) {
   const mains = settingsRows('Main_Category');
   const mainItems = mains.map((r, i) => ({ row: r, gi: i }));
   $('bCol1Title').textContent = 'STEP 2 — Main Category';
+  const mainLetter = groupCode_('Main_Category');
+  const mainPos = mainItems.findIndex(it => it.row.value === bState.main);
+  const mainCode = bState.main === '__none__' ? '' : (mainPos > -1 ? mainLetter + (mainPos + 1) : '');
   let h = mainItems.map((item, li) =>
     bSelRow_('main', 'Main_Category', item, mainItems, li, bState.main === item.row.value, canEdit,
-      ' <span class="muted small">(' + builderSubItems_(item.row.value).length + ' subs)</span>')).join('');
+      ' <span class="muted small">(' + builderSubItems_(item.row.value).length + ' subs)</span>',
+      mainLetter + (li + 1))).join('');
   const unassigned = builderSubItems_('__none__');
   if (unassigned.length) {
     h += '<div class="b-row b-sel' + (bState.main === '__none__' ? ' selected' : '') + '" data-b-sel="main" data-b-value="__none__">' +
@@ -2362,9 +2812,10 @@ function renderBuilderCategories_(c1, c2, c3) {
     c2.innerHTML = '<p class="b-hint">👈 Pehle Step 2 se ek Main Category chunein</p>';
   } else {
     const items = builderSubItems_(bState.main);
-    let h2 = items.map((item, li) =>
-      bSelRow_('sub', 'Sub_Category', item, items, li, bState.sub === item.row.value, canEdit, '')).join('');
-    if (!items.length) h2 = '<p class="b-hint">Abhi is Main Category mein koi Sub Category nahi — neeche se add karein.</p>';
+    const subCodeAt = li => bState.main === '__none__' ? groupCode_('Sub_Category') + (li + 1) : mainCode + '.' + (li + 1);
+    let h2 = bHomeNoteHtml_('Sub_Category') + items.map((item, li) =>
+      bSelRow_('sub', 'Sub_Category', item, items, li, bState.sub === item.row.value, canEdit, '', subCodeAt(li))).join('');
+    if (!items.length) h2 += '<p class="b-hint">Abhi is Main Category mein koi Sub Category nahi — neeche se add karein.</p>';
     if (canEdit) h2 += bAddHtml_('Sub_Category', 'Nayi Sub Category likhein…', bState.main === '__none__' ? '' : 'Under: ' + bState.main);
     c2.innerHTML = h2;
   }
@@ -2378,7 +2829,12 @@ function renderBuilderCategories_(c1, c2, c3) {
   settingsRows('Category_L3').forEach((r, gi) => {
     if (String(r.notes || '') === 'Under: ' + bState.sub) items.push({ row: r, gi: gi });
   });
-  let h3 = bValueRowsHtml_('Category_L3', items, canEdit, true);
+  const subItemsForCode = builderSubItems_(bState.main);
+  const subPosForCode = subItemsForCode.findIndex(it => it.row.value === bState.sub);
+  const selSubCode = bState.main === '__none__'
+    ? groupCode_('Sub_Category') + (subPosForCode + 1)
+    : mainCode + '.' + (subPosForCode + 1);
+  let h3 = bValueRowsHtml_('Category_L3', items, canEdit, true, (item, li) => selSubCode + '.' + (li + 1));
   if (!items.length) h3 = '<p class="b-hint">Abhi koi mazeed category nahi — neeche se add karein.</p>';
   if (canEdit) h3 += bAddHtml_('Category_L3', 'Mazeed category likhein…', 'Under: ' + bState.sub);
   c3.innerHTML = h3;
@@ -2402,8 +2858,8 @@ function renderBuilderGroupCol_(c2, c3, infoText) {
   $('bCol2Title').textContent = 'STEP 3 — ' + groupLabel_(group);
   const rows = settingsRows(group);
   const items = rows.map((r, i) => ({ row: r, gi: i }));
-  let h = bValueRowsHtml_(group, items, canEdit, false);
-  if (!rows.length) h = '<p class="b-hint">Ye list abhi khaali hai — neeche se pehli value add karein.</p>';
+  let h = bHomeNoteHtml_(group) + bValueRowsHtml_(group, items, canEdit, false, (item, li) => groupCode_(group) + (li + 1));
+  if (!rows.length) h += '<p class="b-hint">Ye list abhi khaali hai — neeche se pehli value add karein.</p>';
   if (group === 'Sub_Category') h += '<p class="small muted b-note">Note: Sub Categories ki Main Category ke saath jod 🏷️ Categories wale Step 1 se hoti hai.</p>';
   if (readOnly) h += '<p class="small muted b-note">Ye list system chalata hai (Setup.gs / triggers) — sirf dekhne ke liye hai.</p>';
   if (canEdit) h += bAddHtml_(group, 'Add a new value to ' + groupLabel_(group) + '…', '');
@@ -2415,7 +2871,7 @@ function renderBuilderPage_(c1, c2, c3) {
   $('bCol1Title').textContent = 'STEP 2 — Is Page ke Dropdowns';
   let h = groups.map(g =>
     '<div class="b-row b-sel' + (bState.group === g ? ' selected' : '') + '" data-b-sel="group" data-b-value="' + esc(g) + '">' +
-    '<span class="grow">' + esc(groupLabel_(g)) + ' <span class="muted small">(' + (state.settingsAll[g] || []).length + ')</span></span></div>').join('');
+    '<span class="grow">' + codeBadge_(groupCode_(g)) + esc(groupLabel_(g)) + ' <span class="muted small">(' + (state.settingsAll[g] || []).length + ')</span> <span class="shortcut-badge">🔗 Shortcut</span></span></div>').join('');
   h += '<p class="small muted b-note">Nayi list banani ho to upar ➕ Nayi List Banayein dabayein — wo 📋 Baqi Saari Lists mein milegi.</p>';
   c1.innerHTML = h;
   renderBuilderGroupCol_(c2, c3, BUILDER_PAGE_INFO[bState.mode]);
@@ -2427,7 +2883,7 @@ function renderBuilderAll_(c1, c2, c3) {
   $('bCol1Title').textContent = 'STEP 2 — Saari Lists';
   let h = groups.map(g =>
     '<div class="b-row b-sel' + (bState.group === g ? ' selected' : '') + '" data-b-sel="group" data-b-value="' + esc(g) + '">' +
-    '<span class="grow">' + esc(groupLabel_(g)) + ' <span class="muted small">(' + (state.settingsAll[g] || []).length + ')</span></span></div>').join('');
+    '<span class="grow">' + codeBadge_(groupCode_(g)) + esc(groupLabel_(g)) + ' <span class="muted small">(' + (state.settingsAll[g] || []).length + ')</span></span></div>').join('');
   if (!groups.length) h = '<p class="b-hint">Abhi koi list nahi.</p>';
   c1.innerHTML = h;
   renderBuilderGroupCol_(c2, c3, 'Ye list system ke mukhtalif hisson mein dropdown ke tor par istemal hoti hai.');
@@ -2562,17 +3018,17 @@ async function showInvoice(type, id) {
 /* ==================== Static selects + INIT ============================= */
 function fillStaticSelects() {
   // Re-fill the small static selects from the (possibly refreshed) lists.
-  fillSelect($('posPayment'), state.lists.Payment_Method, $('posPayment').value || 'Cash', false);
-  fillSelect($('purPaymentMode'), state.lists.Payment_Mode, $('purPaymentMode').value || 'Cash', false);
-  fillSelect($('supPayMode'), state.lists.Payment_Mode, $('supPayMode').value || 'Cash', false);
-  fillSelect($('rc_Type'), state.lists.Repair_Type, $('rc_Type').value || 'Hardware', false);
-  fillSelect($('ledPartyType'), state.lists.Party_Type, $('ledPartyType').value || 'Customer', false);
-  fillSelect($('ledType'), state.lists.Ledger_Type, $('ledType').value || 'Credit', false);
-  fillSelect($('ledMode'), state.lists.Payment_Mode, $('ledMode').value || 'Cash', false);
-  fillSelect($('expCategory'), state.lists.Expense_Category, $('expCategory').value || 'Misc', false);
-  fillSelect($('expMode'), state.lists.Payment_Mode, $('expMode').value || 'Cash', false);
-  fillSelect($('retAction'), state.lists.RMA_Action, $('retAction').value || 'Refund', false);
-  fillSelect($('retCondition'), state.lists.Stock_Condition, $('retCondition').value || 'Resellable', false);
+  fillSelectCoded($('posPayment'), 'Payment_Method', state.lists.Payment_Method, $('posPayment').value || 'Cash', false);
+  fillSelectCoded($('purPaymentMode'), 'Payment_Mode', state.lists.Payment_Mode, $('purPaymentMode').value || 'Cash', false);
+  fillSelectCoded($('supPayMode'), 'Payment_Mode', state.lists.Payment_Mode, $('supPayMode').value || 'Cash', false);
+  fillSelectCoded($('rc_Type'), 'Repair_Type', state.lists.Repair_Type, $('rc_Type').value || 'Hardware', false);
+  fillSelectCoded($('ledPartyType'), 'Party_Type', state.lists.Party_Type, $('ledPartyType').value || 'Customer', false);
+  fillSelectCoded($('ledType'), 'Ledger_Type', state.lists.Ledger_Type, $('ledType').value || 'Credit', false);
+  fillSelectCoded($('ledMode'), 'Payment_Mode', state.lists.Payment_Mode, $('ledMode').value || 'Cash', false);
+  fillSelectCoded($('expCategory'), 'Expense_Category', state.lists.Expense_Category, $('expCategory').value || 'Misc', false);
+  fillSelectCoded($('expMode'), 'Payment_Mode', state.lists.Payment_Mode, $('expMode').value || 'Cash', false);
+  fillSelectCoded($('retAction'), 'RMA_Action', state.lists.RMA_Action, $('retAction').value || 'Refund', false);
+  fillSelectCoded($('retCondition'), 'Stock_Condition', state.lists.Stock_Condition, $('retCondition').value || 'Resellable', false);
 }
 function bindEvents() {
   $('loginForm').addEventListener('submit', handleLogin);
@@ -2643,6 +3099,27 @@ function bindEvents() {
     };
     reader.readAsDataURL(f);
   });
+  const gPhotoFileEl = $('cf_GPhotoFile');
+  if (gPhotoFileEl) gPhotoFileEl.addEventListener('change', () => {
+    const f = gPhotoFileEl.files && gPhotoFileEl.files[0];
+    if (!f) return;
+    if (f.size > 3 * 1024 * 1024) { toast('Photo 3MB se chhoti rakhein.', 'error'); gPhotoFileEl.value = ''; return; }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = String(reader.result || '');
+      customerGuarantorPhotoData = { base64: dataUrl.split(',')[1] || '', type: f.type || 'image/jpeg' };
+      const pv = $('cf_GPhotoPreview');
+      if (pv) { pv.src = dataUrl; pv.hidden = false; }
+      toast('📷 Guarantor ki photo tayyar hai — Save dabane par lag jayegi.', 'success');
+    };
+    reader.readAsDataURL(f);
+  });
+  // Registration System filters
+  document.querySelectorAll('#regChips [data-reg-filter]').forEach(b => b.addEventListener('click', () => {
+    regFilter = b.getAttribute('data-reg-filter');
+    document.querySelectorAll('#regChips [data-reg-filter]').forEach(x => x.classList.toggle('active', x === b));
+    renderCustomers();
+  }));
   // Ledger
   $('ledPartyType').addEventListener('change', refreshLedgerPartyOptions);
   $('ledLoadBtn').addEventListener('click', loadLedger);
@@ -2650,6 +3127,25 @@ function bindEvents() {
   $('ledWaBtn').addEventListener('click', ledgerWhatsApp);
   // Expenses
   $('expAddBtn').addEventListener('click', submitExpense);
+  $('expMode').addEventListener('change', syncExpBank_);
+  $('expCatAdd').addEventListener('click', () => expAddSettingValue_('Expense_Category', 'Nayi expense category likhein:', $('expCategory')));
+  $('expModeAdd').addEventListener('click', () => expAddSettingValue_('Payment_Mode', 'Naya payment mode likhein:', $('expMode')));
+  $('expBankAdd').addEventListener('click', expAddBank_);
+  const expReceiptEl = $('expReceipt');
+  if (expReceiptEl) expReceiptEl.addEventListener('change', () => {
+    const f = expReceiptEl.files && expReceiptEl.files[0];
+    if (!f) return;
+    if (f.size > 3 * 1024 * 1024) { toast('Photo 3MB se chhoti rakhein.', 'error'); expReceiptEl.value = ''; return; }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = String(reader.result || '');
+      expReceiptData = { base64: dataUrl.split(',')[1] || '', type: f.type || 'image/jpeg' };
+      const pv = $('expReceiptPreview');
+      if (pv) { pv.src = dataUrl; pv.hidden = false; }
+      toast('🧾 Receipt photo tayyar hai — Save dabane par attach ho jayegi.', 'success');
+    };
+    reader.readAsDataURL(f);
+  });
   // Banners / Users
   $('banAddBtn').addEventListener('click', () => { if (guard('saveBanner')) openBannerModal(null); });
   $('bannerForm').addEventListener('submit', submitBannerForm);
