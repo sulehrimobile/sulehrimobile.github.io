@@ -79,6 +79,12 @@
           <button id="dashRefresh" class="btn btn-ghost" type="button">↻ Refresh</button>
         </div>
         <div id="dashCards" class="cards-grid"></div>
+        <div class="period-switch" id="dashPeriodSwitch">
+          <button type="button" class="per-btn active" data-period="daily">📅 Daily</button>
+          <button type="button" class="per-btn" data-period="monthly">🗓️ Monthly</button>
+          <button type="button" class="per-btn" data-period="yearly">📆 Yearly</button>
+          <span class="small muted" id="dashPeriodNote"></span>
+        </div>
         <div id="dashCharts" class="charts-grid"></div>
         <h3>⚠️ Low Stock — order soon</h3>
         <div id="dashLowStock" class="table-wrap"></div>
@@ -353,8 +359,13 @@
       <section id="mod-settings" class="module" hidden>
         <p class="muted">No-code manager: add, rename, delete or reorder the dropdown values and homepage sections used by the whole system — no code editing needed. Changes save straight to the Settings sheet.</p>
         <p class="note-box">📌 <b>Table columns:</b> you can safely move, rename-free reorder, or resize columns inside Google Sheets — the backend finds every column <b>by its header name</b>, never by column letter, so reordering columns cannot break the system. (Please do not rename a header itself.)</p>
+        <div id="catTreeWrap" class="cat-tree-wrap"></div>
         <div class="settings-grid">
-          <div id="setGroupList" class="group-list"></div>
+          <div class="group-pane">
+            <button type="button" class="btn btn-primary btn-sm" id="setNewListBtn">➕ New Dropdown List</button>
+            <p class="small muted set-newlist-note">New lists appear here instantly. Ask me in chat to attach a list to any form or page.</p>
+            <div id="setGroupList" class="group-list"></div>
+          </div>
           <div class="card">
             <h3 id="setGroupTitle">Choose a list</h3>
             <div id="setValuesWrap"></div>

@@ -1007,6 +1007,10 @@ function barChartSVG_(labels, a, b) {
   });
   return '<svg viewBox="0 0 ' + W + ' ' + H + '" class="chart-svg" role="img">' + s + '</svg>';
 }
+let dashCache = null;
+let dashPeriod = 'daily';
+let dashPeriodWired = false;
+
 async function loadDashboardCharts() {
   const wrap = $('dashCharts');
   if (!wrap) return;
@@ -1016,51 +1020,97 @@ async function loadDashboardCharts() {
       api('getRepairs', {}).catch(() => ({ repairs: [] })),
       can('getExpenses') ? api('getExpenses', {}).catch(() => ({ expenses: [] })) : Promise.resolve({ expenses: [] })
     ]);
-    const orders = (results[0].orders || []).filter(o => String(o.Order_Status) !== 'Cancelled');
-    const repairs = (results[1].repairs || []).filter(r => String(r.Current_Stage) !== 'Unrepairable');
-    const expenses = results[2].expenses || [];
-    const days = lastDays_(14);
-    const salesByDay = {}, largestByDay = {};
-    orders.forEach(o => {
-      const k = dayKey_(o.Date); if (!k) return;
-      salesByDay[k] = (salesByDay[k] || 0) + num(o.Total_Amount);
-      largestByDay[k] = Math.max(largestByDay[k] || 0, num(o.Total_Amount));
-    });
-    const salesVals = days.map(k => salesByDay[k] || 0);
-    const dayLabels = days.map(k => k.slice(5));
-    const candles = days.map((k, i) => {
-      const close = salesVals[i];
-      const open = i ? salesVals[i - 1] : close;
-      return { label: dayLabels[i], open: open, close: close, high: Math.max(open, close, largestByDay[k] || 0), low: Math.min(open, close) };
-    });
-    const mk = dayKey_(new Date()).slice(0, 7);
-    let mSales = 0, mRepair = 0, mExp = 0;
-    orders.forEach(o => { if (dayKey_(o.Date).slice(0, 7) === mk) mSales += num(o.Total_Amount); });
-    repairs.forEach(r => { if (dayKey_(r.Date_Received).slice(0, 7) === mk) mRepair += num(r.Total_Amount); });
-    expenses.forEach(x => { if (dayKey_(x.Date).slice(0, 7) === mk) mExp += num(x.Amount); });
-    const months = []; const nowD = new Date();
-    for (let i = 5; i >= 0; i--) {
+    dashCache = {
+      orders: (results[0].orders || []).filter(o => String(o.Order_Status) !== 'Cancelled'),
+      repairs: (results[1].repairs || []).filter(r => String(r.Current_Stage) !== 'Unrepairable'),
+      expenses: results[2].expenses || []
+    };
+  } catch (e) { if (!dashCache) { wrap.innerHTML = ''; return; } }
+  wireDashPeriod_();
+  renderDashCharts(dashPeriod);
+}
+function wireDashPeriod_() {
+  if (dashPeriodWired) return;
+  const sw = $('dashPeriodSwitch');
+  if (!sw) return;
+  dashPeriodWired = true;
+  sw.querySelectorAll('[data-period]').forEach(b => b.addEventListener('click', () => {
+    dashPeriod = b.getAttribute('data-period');
+    sw.querySelectorAll('[data-period]').forEach(x => x.classList.toggle('active', x === b));
+    renderDashCharts(dashPeriod);
+  }));
+}
+function fmtDay_(key) {
+  const p = String(key).split('-');
+  const d = new Date(num(p[0]), num(p[1]) - 1, num(p[2]));
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+function monthName_(key) {
+  const p = String(key).split('-');
+  const d = new Date(num(p[0]), num(p[1]) - 1, 1);
+  return d.toLocaleString('en', { month: 'short', year: 'numeric' });
+}
+function renderDashCharts(period) {
+  const wrap = $('dashCharts');
+  if (!wrap || !dashCache) return;
+  const orders = dashCache.orders, repairs = dashCache.repairs, expenses = dashCache.expenses;
+  const nowD = new Date();
+  let buckets = [];
+  if (period === 'monthly') {
+    for (let i = 11; i >= 0; i--) {
       const d = new Date(nowD.getFullYear(), nowD.getMonth() - i, 1);
-      months.push({ key: dayKey_(d).slice(0, 7), label: d.toLocaleString('en', { month: 'short' }) });
+      buckets.push({ key: dayKey_(d).slice(0, 7), label: d.toLocaleString('en', { month: 'short' }) + ' ' + String(d.getFullYear()).slice(2) });
     }
-    const inMonth = (v, key) => dayKey_(v).slice(0, 7) === key;
-    const inc = months.map(m =>
-      orders.filter(o => inMonth(o.Date, m.key)).reduce((a, o) => a + num(o.Total_Amount), 0) +
-      repairs.filter(r => inMonth(r.Date_Received, m.key)).reduce((a, r) => a + num(r.Total_Amount), 0));
-    const exp = months.map(m =>
-      expenses.filter(x => inMonth(x.Date, m.key)).reduce((a, x) => a + num(x.Amount), 0));
-    const donut = donutSVG_([
-      { label: 'Sales', value: mSales, color: '#0B7A75' },
-      { label: 'Repair Income', value: mRepair, color: '#f5a623' },
-      { label: 'Expenses', value: mExp, color: '#e5484d' }
-    ]);
-    wrap.innerHTML =
-      chartCard_('📈 Sales — Last 14 Days', lineChartSVG_(dayLabels, salesVals, '#0B2A5B')) +
-      chartCard_('🕯️ Daily Sales Candles (wick = sab se bara order)', candleChartSVG_(candles)) +
-      chartCard_('🍩 This Month — Paisa Kahan Se / Kahan Gaya', donut.svg, donut.legend) +
-      chartCard_('📊 Last 6 Months — Income vs Expenses', barChartSVG_(months.map(m => m.label), inc, exp),
-        '<div class="ch-legend"><div><span class="ch-dot" style="background:#0B7A75"></span>Income</div><div><span class="ch-dot" style="background:#e5484d"></span>Expenses</div></div>');
-  } catch (e) { wrap.innerHTML = ''; }
+  } else if (period === 'yearly') {
+    const yrs = {};
+    orders.forEach(o => { const y = dayKey_(o.Date).slice(0, 4); if (y) yrs[y] = 1; });
+    repairs.forEach(r => { const y = dayKey_(r.Date_Received).slice(0, 4); if (y) yrs[y] = 1; });
+    expenses.forEach(x => { const y = dayKey_(x.Date).slice(0, 4); if (y) yrs[y] = 1; });
+    let keys = Object.keys(yrs).sort();
+    if (!keys.length) keys = [String(nowD.getFullYear())];
+    buckets = keys.map(y => ({ key: y, label: y }));
+  } else {
+    buckets = lastDays_(14).map(k => ({ key: k, label: k.slice(5) }));
+  }
+  const inBucket = (v, key) => {
+    const dk = dayKey_(v); if (!dk) return false;
+    if (period === 'daily') return dk === key;
+    if (period === 'monthly') return dk.slice(0, 7) === key;
+    return dk.slice(0, 4) === key;
+  };
+  const sales = [], largest = [], repInc = [], expVals = [];
+  buckets.forEach(b => {
+    let s = 0, lg = 0, rp = 0, ex = 0;
+    orders.forEach(o => { if (inBucket(o.Date, b.key)) { const t = num(o.Total_Amount); s += t; lg = Math.max(lg, t); } });
+    repairs.forEach(r => { if (inBucket(r.Date_Received, b.key)) rp += num(r.Total_Amount); });
+    expenses.forEach(x => { if (inBucket(x.Date, b.key)) ex += num(x.Amount); });
+    sales.push(s); largest.push(lg); repInc.push(rp); expVals.push(ex);
+  });
+  const labels = buckets.map(b => b.label);
+  const candles = buckets.map((b, i) => {
+    const close = sales[i];
+    const open = i ? sales[i - 1] : close;
+    return { label: b.label, open: open, close: close, high: Math.max(open, close, largest[i]), low: Math.min(open, close) };
+  });
+  const donut = donutSVG_([
+    { label: 'Sales', value: sales.reduce((a, v) => a + v, 0), color: '#0B7A75' },
+    { label: 'Repair Income', value: repInc.reduce((a, v) => a + v, 0), color: '#f5a623' },
+    { label: 'Expenses', value: expVals.reduce((a, v) => a + v, 0), color: '#e5484d' }
+  ]);
+  const lineTitle = period === 'monthly' ? '📈 Sales — Mahana (Last 12 Months)' :
+    period === 'yearly' ? '📈 Sales — Salana (Year Wise)' : '📈 Sales — Rozana (Last 14 Days)';
+  wrap.innerHTML =
+    chartCard_(lineTitle, lineChartSVG_(labels, sales, '#0B2A5B')) +
+    chartCard_('🕯️ Sales Candles (wick = sab se bara order)', candleChartSVG_(candles)) +
+    chartCard_('🍩 Kul Arsa — Paisa Kahan Se / Kahan Gaya', donut.svg, donut.legend) +
+    chartCard_('📊 Income vs Expenses', barChartSVG_(labels, sales.map((s, i) => s + repInc[i]), expVals),
+      '<div class="ch-legend"><div><span class="ch-dot" style="background:#0B7A75"></span>Income</div><div><span class="ch-dot" style="background:#e5484d"></span>Expenses</div></div>');
+  const note = $('dashPeriodNote');
+  if (note && buckets.length) {
+    if (period === 'daily') note.textContent = 'Report: ' + fmtDay_(buckets[0].key) + ' → ' + fmtDay_(buckets[buckets.length - 1].key);
+    else if (period === 'monthly') note.textContent = 'Report: ' + monthName_(buckets[0].key) + ' → ' + monthName_(buckets[buckets.length - 1].key);
+    else note.textContent = buckets.length > 1 ? 'Report: ' + buckets[0].key + ' → ' + buckets[buckets.length - 1].key : 'Report: ' + buckets[0].key;
+  }
 }
 
 /* ---------- Customer photo helpers ---------- */
@@ -2101,8 +2151,14 @@ async function loadSettingsModule() {
   if (!state.settingsGroup || groups.indexOf(state.settingsGroup) === -1) {
     state.settingsGroup = groups.indexOf('Section_Order') > -1 ? 'Section_Order' : (groups[0] || '');
   }
+  const nlBtn = $('setNewListBtn');
+  if (nlBtn && !nlBtn.getAttribute('data-wired')) {
+    nlBtn.setAttribute('data-wired', '1');
+    nlBtn.addEventListener('click', createSettingsList);
+  }
   renderSettingsGroups();
   renderSettingsValues();
+  renderCategoryTree();
 }
 function renderSettingsGroups() {
   $('setGroupList').innerHTML = Object.keys(state.settingsAll).map(g =>
@@ -2129,8 +2185,8 @@ function renderSettingsValues() {
     (readOnly ? '' :
       '<button type="button" class="btn btn-ghost btn-sm" data-set-up="' + i + '" ' + (i === 0 ? 'disabled' : '') + '>↑</button>' +
       '<button type="button" class="btn btn-ghost btn-sm" data-set-down="' + i + '" ' + (i === rows.length - 1 ? 'disabled' : '') + '>↓</button>' +
-      '<button type="button" class="btn btn-ghost btn-sm" data-set-rename="' + i + '">Rename</button>' +
-      '<button type="button" class="btn btn-danger btn-sm" data-set-del="' + i + '">Delete</button>') +
+      '<button type="button" class="btn btn-ghost btn-sm icon-btn" title="Rename" aria-label="Rename" data-set-rename="' + i + '">✏️</button>' +
+      '<button type="button" class="btn btn-danger btn-sm icon-btn" title="Delete" aria-label="Delete" data-set-del="' + i + '">🗑</button>') +
     '</div>').join('');
   if (!readOnly && can('saveSetting')) {
     h += '<div class="set-add"><input id="setNewValue" type="text" placeholder="Add a new value to ' + esc(group.replace(/_/g, ' ')) + '…">' +
@@ -2144,6 +2200,7 @@ function renderSettingsValues() {
       state.settingsAll[group] = newRows.map((r, i) => Object.assign({}, r, { order: i + 1 }));
       applyListsFromSettings(state.settingsAll);
       renderSettingsValues();
+      renderCategoryTree();
       toast('Order saved.', 'success');
     } catch (e) { /* queue toasted */ }
   };
@@ -2192,6 +2249,158 @@ function renderSettingsValues() {
       loadSettingsModule();
     } catch (e) {}
   });
+}
+
+/* ---------- Category Tree + new dropdown lists (Settings redesign) ---------- */
+const SUB_PARENT_DEFAULTS = {
+  'New Phones': 'Phones', 'Box Pack Phones': 'Phones', 'Used Phones': 'Phones', 'Mobile Phones': 'Phones',
+  'Units': 'Parts', 'Sub-boards': 'Parts', 'Strips': 'Parts', 'OCA Glass': 'Parts',
+  'Glass Protectors': 'Accessories', 'Back Covers': 'Accessories', 'Chargers': 'Accessories',
+  'Handsfree': 'Accessories', 'Data Cables': 'Accessories'
+};
+function subParent_(row, productMap, mainSet) {
+  const notes = String(row.notes || '');
+  let parent = '';
+  if (notes.indexOf('Under: ') === 0) parent = notes.slice(7).trim();
+  if (!parent && productMap[row.value]) parent = productMap[row.value];
+  if (!parent && SUB_PARENT_DEFAULTS[row.value]) parent = SUB_PARENT_DEFAULTS[row.value];
+  return (parent && mainSet[parent]) ? parent : '';
+}
+async function settingsRenamePrompt_(group, value) {
+  const nv = prompt('Rename "' + value + '" to:', value);
+  if (!nv || nv.trim() === value) return;
+  try {
+    await queueWrite('saveSetting', { op: 'rename', Group: group, Value: value, NewValue: nv.trim() });
+    toast('Renamed.', 'success');
+    loadSettingsModule();
+  } catch (e) {}
+}
+async function settingsDeleteConfirm_(group, value) {
+  if (!confirm('Delete "' + value + '" from ' + group + '?\n\nProducts/jobs that already use this value keep it in their history, but it will disappear from dropdowns.')) return;
+  try {
+    await queueWrite('saveSetting', { op: 'delete', Group: group, Value: value });
+    toast('Deleted.', 'success');
+    loadSettingsModule();
+  } catch (e) {}
+}
+function renderCategoryTree() {
+  const wrap = $('catTreeWrap');
+  if (!wrap) return;
+  const canEdit = can('saveSetting');
+  const mains = settingsRows('Main_Category');
+  const subs = settingsRows('Sub_Category');
+  const mainSet = {};
+  mains.forEach(m => { mainSet[m.value] = 1; });
+  const productMap = {};
+  (state.products || []).forEach(p => {
+    if (p && p.Sub_Category && p.Main_Category && !productMap[p.Sub_Category]) productMap[p.Sub_Category] = p.Main_Category;
+  });
+  const byParent = {};
+  const unassigned = [];
+  subs.forEach((r, gi) => {
+    const parent = subParent_(r, productMap, mainSet);
+    if (parent) (byParent[parent] = byParent[parent] || []).push({ row: r, gi: gi });
+    else unassigned.push({ row: r, gi: gi });
+  });
+  const subRowsHtml = items => items.map((item, li) => {
+    const upPair = item.gi + ',' + (li > 0 ? items[li - 1].gi : -1);
+    const dnPair = item.gi + ',' + (li < items.length - 1 ? items[li + 1].gi : -1);
+    return '<div class="set-row cat-sub-row"><span class="grow">' + esc(item.row.value) + '</span>' +
+      (canEdit ?
+        '<button type="button" class="btn btn-ghost btn-sm" data-cat-up="' + upPair + '" ' + (li === 0 ? 'disabled' : '') + '>↑</button>' +
+        '<button type="button" class="btn btn-ghost btn-sm" data-cat-down="' + dnPair + '" ' + (li === items.length - 1 ? 'disabled' : '') + '>↓</button>' +
+        '<button type="button" class="btn btn-ghost btn-sm icon-btn" title="Rename" aria-label="Rename" data-cat-rename="' + item.gi + '">✏️</button>' +
+        '<button type="button" class="btn btn-danger btn-sm icon-btn" title="Delete" aria-label="Delete" data-cat-del="' + item.gi + '">🗑</button>' : '') +
+      '</div>';
+  }).join('');
+  const cardHtml = (title, items, parentForAdd, isGeneral) => {
+    let h = '<div class="cat-card"><div class="cat-card-head"><span class="grow">' +
+      (isGeneral ? '📌 <b>General / Unassigned</b>' : '🌳 <b>' + esc(title) + '</b>') +
+      ' <span class="muted small">(' + items.length + ' sub categories)</span></span>';
+    if (!isGeneral && canEdit) {
+      h += '<button type="button" class="btn btn-ghost btn-sm icon-btn" title="Rename" aria-label="Rename" data-cat-main-rename="' + esc(title) + '">✏️</button>' +
+        '<button type="button" class="btn btn-danger btn-sm icon-btn" title="Delete" aria-label="Delete" data-cat-main-del="' + esc(title) + '">🗑</button>';
+    }
+    h += '</div>' + subRowsHtml(items);
+    if (canEdit) {
+      h += '<div class="set-add"><input type="text" placeholder="Add a sub category' + (isGeneral ? '…' : ' under ' + esc(title) + '…') + '">' +
+        '<button type="button" class="btn btn-primary btn-sm" data-cat-add-btn="' + esc(parentForAdd) + '">➕ Add</button></div>';
+    }
+    return h + '</div>';
+  };
+  let h = '<div class="cat-tree-head"><h3>🌳 Category Tree — Main Category ke neeche us ki Sub Categories</h3></div>';
+  if (canEdit) {
+    h += '<div class="set-add cat-add-main"><input id="catNewMain" type="text" placeholder="Add a new Main Category…">' +
+      '<button type="button" class="btn btn-primary" id="catAddMainBtn">➕ Add Main Category</button></div>';
+  }
+  mains.forEach(m => { h += cardHtml(m.value, byParent[m.value] || [], m.value, false); });
+  if (unassigned.length) h += cardHtml('', unassigned, '', true);
+  wrap.innerHTML = h;
+  wrap.querySelectorAll('[data-cat-main-rename]').forEach(b => b.addEventListener('click', () =>
+    settingsRenamePrompt_('Main_Category', b.getAttribute('data-cat-main-rename'))));
+  wrap.querySelectorAll('[data-cat-main-del]').forEach(b => b.addEventListener('click', () =>
+    settingsDeleteConfirm_('Main_Category', b.getAttribute('data-cat-main-del'))));
+  wrap.querySelectorAll('[data-cat-rename]').forEach(b => b.addEventListener('click', () => {
+    const row = settingsRows('Sub_Category')[num(b.getAttribute('data-cat-rename'))];
+    if (row) settingsRenamePrompt_('Sub_Category', row.value);
+  }));
+  wrap.querySelectorAll('[data-cat-del]').forEach(b => b.addEventListener('click', () => {
+    const row = settingsRows('Sub_Category')[num(b.getAttribute('data-cat-del'))];
+    if (row) settingsDeleteConfirm_('Sub_Category', row.value);
+  }));
+  const swapSubs = async pair => {
+    const parts = String(pair).split(',');
+    const gi = num(parts[0]), gj = num(parts[1]);
+    if (gj < 0) return;
+    const arr = settingsRows('Sub_Category');
+    if (!arr[gi] || !arr[gj]) return;
+    const tmp = arr[gi]; arr[gi] = arr[gj]; arr[gj] = tmp;
+    try {
+      await queueWrite('saveSetting', { op: 'reorder', Group: 'Sub_Category', Values: arr.map(r => r.value) });
+      toast('Order saved.', 'success');
+      loadSettingsModule();
+    } catch (e) { /* queue toasted */ }
+  };
+  wrap.querySelectorAll('[data-cat-up]').forEach(b => b.addEventListener('click', () => swapSubs(b.getAttribute('data-cat-up'))));
+  wrap.querySelectorAll('[data-cat-down]').forEach(b => b.addEventListener('click', () => swapSubs(b.getAttribute('data-cat-down'))));
+  wrap.querySelectorAll('[data-cat-add-btn]').forEach(b => b.addEventListener('click', async () => {
+    const parent = b.getAttribute('data-cat-add-btn');
+    const input = b.parentElement ? b.parentElement.querySelector('input') : null;
+    const v = input ? input.value.trim() : '';
+    if (!v) { toast('Type a value first.', 'error'); return; }
+    const payload = { op: 'add', Group: 'Sub_Category', Value: v };
+    if (parent) payload.Notes = 'Under: ' + parent;
+    try {
+      await queueWrite('saveSetting', payload);
+      toast('Added "' + v + '".', 'success');
+      loadSettingsModule();
+    } catch (e) {}
+  }));
+  const addMainBtn = document.getElementById('catAddMainBtn');
+  if (addMainBtn) addMainBtn.addEventListener('click', async () => {
+    const input = document.getElementById('catNewMain');
+    const v = input ? input.value.trim() : '';
+    if (!v) { toast('Type a value first.', 'error'); return; }
+    try {
+      await queueWrite('saveSetting', { op: 'add', Group: 'Main_Category', Value: v });
+      toast('Added "' + v + '".', 'success');
+      loadSettingsModule();
+    } catch (e) {}
+  });
+}
+async function createSettingsList() {
+  const name = prompt('New dropdown list ka naam likhein (e.g. Phone Condition):');
+  if (!name || !name.trim()) return;
+  const key = name.trim().replace(/\s+/g, '_');
+  if (state.settingsAll[key]) { toast('"' + key.replace(/_/g, ' ') + '" list pehle se mojood hai.', 'error'); return; }
+  const value = prompt('Is list ki pehli value likhein:');
+  if (!value || !value.trim()) return;
+  try {
+    await queueWrite('saveSetting', { op: 'add', Group: key, Value: value.trim() });
+    toast('New list "' + key.replace(/_/g, ' ') + '" ban gayi.', 'success');
+    state.settingsGroup = key;
+    loadSettingsModule();
+  } catch (e) {}
 }
 
 /* ========================== 21. USERS & ROLES =========================== */

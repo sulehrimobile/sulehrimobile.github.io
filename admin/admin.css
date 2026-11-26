@@ -249,6 +249,27 @@ tr.low-stock:hover td{background:#FFEDD5}
 .ch-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 8px; font-size: .88rem; }
 .ch-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; }
 
+/* ===== Dashboard period switch (Daily / Monthly / Yearly) ===== */
+.period-switch { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; margin: .2rem 0 .4rem; }
+.per-btn { min-height: 40px; padding: .45rem 1.05rem; border-radius: 999px; border: 1px solid var(--line); background: var(--white); color: var(--navy); font-weight: 700; cursor: pointer; transition: background .15s ease, border-color .15s ease; }
+.per-btn:hover { border-color: var(--blue); }
+.per-btn:active { transform: scale(.97); }
+.per-btn.active { background: var(--navy); border-color: var(--navy); color: #fff; box-shadow: var(--shadow-sm); }
+#dashPeriodNote { margin-left: .25rem; }
+
+/* ===== Settings redesign: category tree + new lists ===== */
+.cat-tree-wrap { margin-bottom: 1rem; }
+.cat-tree-head h3 { margin: .2rem 0 .6rem; }
+.cat-add-main { margin: 0 0 .9rem; max-width: 560px; }
+.cat-card { background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow-sm); padding: .8rem 1rem; margin-bottom: .8rem; }
+.cat-card-head { display: flex; align-items: center; gap: .45rem; margin-bottom: .55rem; }
+.cat-card-head .grow { font-size: 1.02rem; min-width: 0; }
+.cat-sub-row { margin-left: 1.4rem; }
+.cat-card .set-add { max-width: 560px; margin-left: 1.4rem; }
+.group-pane #setNewListBtn { width: 100%; }
+.set-newlist-note { margin: .35rem 0 .6rem; }
+.set-row .icon-btn, .cat-card .icon-btn { min-width: 36px; min-height: 36px; padding: .25rem .45rem; border-radius: 10px; font-size: .95rem; }
+
 /* ===== Customer photos (v2.3) ===== */
 .cust-cell { display: inline-flex; align-items: center; gap: 10px; }
 .cust-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; flex: none; border: 2px solid rgba(11,42,91,.15); }
