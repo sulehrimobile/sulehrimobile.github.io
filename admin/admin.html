@@ -286,35 +286,105 @@
 
       <!-- ============ LEDGER ============ -->
       <section id="mod-ledger" class="module" hidden>
+        <div class="reg-counts" id="ledStats"></div>
         <div id="ledReminders" class="card reminders-card"></div>
-        <div class="pos-grid">
-          <div class="card">
-            <h3>📒 Khata — Party Ledger</h3>
-            <label>Party Type <select id="ledPartyType"></select></label>
-            <label>Party <select id="ledPartySel"></select></label>
-            <button id="ledLoadBtn" class="btn btn-ghost btn-block" type="button">Load Ledger</button>
-            <p class="pos-total-row">Current Balance Owed <strong id="ledBalance">—</strong></p>
-            <button id="ledWaBtn" class="btn btn-whatsapp btn-block" type="button" hidden>📱 WhatsApp Payment Reminder</button>
-            <div id="ledPartyCard"></div>
-          </div>
-          <div class="card">
-            <h3>➕ Add Entry / Record Payment</h3>
-            <div class="two-col">
-              <label>Type <select id="ledType"></select></label>
-              <label>Payment Mode <select id="ledMode"></select></label>
-            </div>
-            <div class="two-col">
-              <label>Amount (PKR) <input id="ledAmount" type="number" min="0" step="any"></label>
-              <label>Due Date <input id="ledDue" type="date"></label>
-            </div>
-            <label>Reference Note <input id="ledNote" type="text" placeholder="e.g. Payment received — thank you"></label>
-            <div class="field"><label>Invoice No (optional)</label><input id="ledInvoiceNo" type="text" placeholder="e.g. ORD-1001 ya REP-1001"></div>
-            <button id="ledAddBtn" class="btn btn-primary btn-block" type="button">Save Entry</button>
-            <p id="ledMsg" class="success-text" hidden></p>
-          </div>
+        <div class="filters-row led-toolbar">
+          <input id="ledSearch" type="text" placeholder="🔍 Customer ka naam ya number likhein…">
+          <button type="button" class="btn btn-primary" id="ledAddKhata">➕ Add New Khata / Customer</button>
+        </div>
+        <div id="ledCustList" class="led-cust-list"></div>
+        <div class="card">
+          <h3>📒 Khata — Party Ledger</h3>
+          <label>Party Type <select id="ledPartyType"></select></label>
+          <label>Party <select id="ledPartySel"></select></label>
+          <button id="ledLoadBtn" class="btn btn-ghost btn-block" type="button">Load Ledger</button>
+          <p class="pos-total-row">Current Balance Owed <strong id="ledBalance">—</strong></p>
+          <button id="ledWaBtn" class="btn btn-whatsapp btn-block" type="button" hidden>📱 WhatsApp Payment Reminder</button>
+          <div id="ledPartyCard"></div>
         </div>
         <div id="ledTableWrap" class="table-wrap"></div>
         <div id="ledInvoiceDetail"></div>
+        <div class="card">
+          <h3>➕ Add Entry / Record Payment</h3>
+          <div class="two-col">
+            <label>Type <select id="ledType"></select></label>
+            <label>Payment Mode <select id="ledMode"></select></label>
+          </div>
+          <div class="two-col">
+            <label>Amount (PKR) <input id="ledAmount" type="number" min="0" step="any"></label>
+            <label>Due Date <input id="ledDue" type="date"></label>
+          </div>
+          <label>Reference Note <input id="ledNote" type="text" placeholder="e.g. Payment received — thank you"></label>
+          <div class="field"><label>Invoice No (optional)</label><input id="ledInvoiceNo" type="text" placeholder="e.g. ORD-1001 ya REP-1001"></div>
+          <button id="ledAddBtn" class="btn btn-primary btn-block" type="button">Save Entry</button>
+          <p id="ledMsg" class="success-text" hidden></p>
+        </div>
+      </section>
+
+      <!-- ============ ADD NEW KHATA / CUSTOMER ============ -->
+      <section class="module" id="module-khata-new" hidden>
+        <div class="card">
+          <h3>➕ Add New Khata / Customer</h3>
+          <p class="small muted">Naye customer ya shopkeeper ka khata kholein — details bharein, photo aur CNIC copies attach karein, guarantor set karein aur payment reminder ki date rakhein. Save karte hi is ka khata khul jayega.</p>
+          <div class="khata-form">
+            <label>Naam * <input id="kn_Name" type="text" placeholder="e.g. Muhammad Ahmad"></label>
+            <label>Mobile Number * <input id="kn_Phone" type="tel" placeholder="03xx-xxxxxxx"></label>
+            <label>Email <input id="kn_Email" type="email" placeholder="optional"></label>
+            <label>Registration Type
+              <select id="kn_Type">
+                <option value="Customer">👤 Customer</option>
+                <option value="Shopkeeper">🏪 Shopkeeper</option>
+              </select>
+            </label>
+            <label>Channel
+              <select id="kn_Channel">
+                <option value="Offline">🏪 Offline (Shop)</option>
+                <option value="Online">🌐 Online</option>
+              </select>
+            </label>
+            <label>Credit Limit (PKR) <input id="kn_CreditLimit" type="number" min="0" step="any" value="50000"></label>
+            <label>Har Maah Payment ki Date (Reminder) <input id="kn_PaymentDay" type="number" min="1" max="31" placeholder="1–31 (e.g. 10)"></label>
+            <label>Pehli Payment Due Date (optional) <input id="kn_DueDate" type="date"></label>
+            <label>Reference By <input id="kn_ReferenceBy" type="text" placeholder="Kis ke reference se aaya?"></label>
+            <div class="field">
+              <label>Customer ki Photo</label>
+              <input id="kn_PhotoFile" type="file" accept="image/*">
+              <img id="kn_PhotoPreview" class="photo-preview" hidden>
+            </div>
+          </div>
+          <fieldset class="sub-fieldset">
+            <legend>🪪 CNIC (ID Card) Copies</legend>
+            <div class="two-col">
+              <div class="field">
+                <label>CNIC Front</label>
+                <input id="kn_CnicFrontFile" type="file" accept="image/*">
+                <img id="kn_CnicFrontPreview" class="photo-preview" hidden>
+              </div>
+              <div class="field">
+                <label>CNIC Back</label>
+                <input id="kn_CnicBackFile" type="file" accept="image/*">
+                <img id="kn_CnicBackPreview" class="photo-preview" hidden>
+              </div>
+            </div>
+          </fieldset>
+          <fieldset class="sub-fieldset">
+            <legend>🛡️ Guarantor (Zamanat Dene Wala)</legend>
+            <div class="two-col">
+              <label>Guarantor ka Naam <input id="kn_GName" type="text"></label>
+              <label>Guarantor ka Phone <input id="kn_GPhone" type="tel"></label>
+            </div>
+            <div class="field">
+              <label>Guarantor ki Photo</label>
+              <input id="kn_GPhotoFile" type="file" accept="image/*">
+              <img id="kn_GPhotoPreview" class="photo-preview" hidden>
+            </div>
+          </fieldset>
+          <p id="knError" class="form-error" hidden></p>
+          <div class="btn-row">
+            <button type="button" class="btn btn-primary" id="knSave">💾 Khata Save Karein</button>
+            <button type="button" class="btn btn-ghost" id="knBack">⬅️ Wapas Khata Page</button>
+          </div>
+        </div>
       </section>
 
       <!-- ============ EXPENSES ============ -->

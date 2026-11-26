@@ -232,14 +232,46 @@ function fillSelectCoded(el, group, values, selected, includeBlank) {
   el.innerHTML = (includeBlank ? '<option value="">— Select —</option>' : '') +
     values.map((v, i) => {
       const label = (v === '' || v === null || v === undefined) ? '' : codedCodeFor_(group, v, i) + ' · ' + v;
-      return '<option value="' + esc(v) + '"' + (String(v) === String(selected) ? ' selected' : '') + '>' + esc(label) + '</option>';
+      return '<option value="' + esc(v) + '"' + (String(v) === String(selected) ? ' selected' : '') + codedTintStyle_(group, v) + '>' + esc(label) + '</option>';
     }).join('');
 }
 /* String-built selects (jo innerHTML se bante hain) ke liye coded options. */
 function codedOptions_(group, values, selected) {
   return values.map((v, i) =>
-    '<option value="' + esc(v) + '"' + (String(v) === String(selected) ? ' selected' : '') + '>' +
+    '<option value="' + esc(v) + '"' + (String(v) === String(selected) ? ' selected' : '') + codedTintStyle_(group, v) + '>' +
     esc((v === '' || v === null || v === undefined) ? '' : codedCodeFor_(group, v, i) + ' · ' + v) + '</option>').join('');
+}
+/* ---------- Code colors: har code letter ka apna rang (sirf admin panel) ----------
+   GROUP_COLORS = strong rang (badges / dots ke liye), GROUP_TINTS = halka
+   pastel rang (dropdown options ke background ke liye). Dono code ke pehle
+   letter se bante hain, taake har list ka rang har jagah ek jaisa rahe. */
+const GROUP_COLORS = {
+  A: '#2563eb', B: '#7c3aed', C: '#db2777', D: '#059669', E: '#d97706', F: '#0891b2',
+  G: '#4d7c0f', H: '#9333ea', I: '#0f766e', J: '#92400e', K: '#0369a1', L: '#be123c',
+  M: '#15803d', N: '#a16207', O: '#1e40af', P: '#c2410c', Q: '#6d28d9', R: '#0e7490',
+  S: '#b91c1c', T: '#475569', U: '#7e22ce', V: '#166534', W: '#9a3412', X: '#334155',
+  Y: '#854d0e', Z: '#e11d48'
+};
+const GROUP_TINTS = {
+  A: '#dbeafe', B: '#ede9fe', C: '#fce7f3', D: '#d1fae5', E: '#fef3c7', F: '#cffafe',
+  G: '#ecfccb', H: '#f3e8ff', I: '#ccfbf1', J: '#ffedd5', K: '#e0f2fe', L: '#ffe4e6',
+  M: '#dcfce7', N: '#fef9c3', O: '#dbeafe', P: '#ffedd5', Q: '#ede9fe', R: '#cffafe',
+  S: '#fee2e2', T: '#e2e8f0', U: '#f3e8ff', V: '#dcfce7', W: '#ffedd5', X: '#e2e8f0',
+  Y: '#fef9c3', Z: '#ffe4e6'
+};
+function codeColor_(code) {
+  const letter = String(code || '').charAt(0).toUpperCase();
+  return GROUP_COLORS[letter] || '#0B2A5B';
+}
+function codeTint_(code) {
+  const letter = String(code || '').charAt(0).toUpperCase();
+  return GROUP_TINTS[letter] || '';
+}
+/* Ek coded <option> ke liye pastel background style (blank option bila rang). */
+function codedTintStyle_(group, v) {
+  if (v === '' || v === null || v === undefined) return '';
+  const tint = codeTint_(groupCode_(group));
+  return tint ? ' style="background:' + tint + '"' : '';
 }
 function productName(p) { return ((p.Brand || '') + ' ' + (p.Model || '')).trim() || p.Product_ID; }
 function productById(id) { return state.products.find(p => String(p.Product_ID) === String(id)); }
@@ -845,6 +877,8 @@ function showModule(id) {
   }
   state.module = id;
   MODULES.forEach(m => { const el = $('mod-' + m.id); if (el) el.hidden = m.id !== id; });
+  const knSec = $('module-khata-new');
+  if (knSec) knSec.hidden = true;
   $('topbarTitle').textContent = mod.label;
   buildNav();
   const loaders = {
@@ -2006,12 +2040,121 @@ async function submitCustomerForm(ev) {
 }
 
 /* ========================== 15. LEDGER ================================== */
+/* Saari ledger entries ka cache — stats, customer list aur reminders teeno
+   ek hi fetch istemal karte hain (har module load par ek dafa). Koi nayi
+   entry save ho to loadLedger() cache invalidate kar deta hai. */
+let ledAllEntriesPromise = null;
+let ledCustData = [];
+function fetchAllLedger_() {
+  if (!ledAllEntriesPromise) {
+    ledAllEntriesPromise = api('getLedger', {}).then(d => d.entries || [])
+      .catch(e => { ledAllEntriesPromise = null; throw e; });
+  }
+  return ledAllEntriesPromise;
+}
+function invalidateLedgerCache_() { ledAllEntriesPromise = null; }
+/* Party ki asal due date: entries ki sab se bari Due_Date, aur customer ke
+   liye us ki maahana Payment_Day wali date — jo PEHLE aaye wahi effective. */
+function ledEffectiveDue_(cust, entryDueKey) {
+  let due = entryDueKey || '';
+  let monthly = false;
+  const pd = cust ? num(cust.Payment_Day) : 0;
+  if (pd >= 1 && pd <= 31) {
+    const now = new Date();
+    const dim = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const mKey = dayKey_(new Date(now.getFullYear(), now.getMonth(), Math.min(pd, dim)));
+    if (!due || mKey < due) { due = mKey; monthly = true; }
+  }
+  return { key: due, monthly: monthly };
+}
 async function loadLedgerModule() {
   fillSelectCoded($('ledPartyType'), 'Party_Type', state.lists.Party_Type, $('ledPartyType').value || 'Customer', false);
   fillSelectCoded($('ledType'), 'Ledger_Type', state.lists.Ledger_Type, 'Credit', false);
   fillSelectCoded($('ledMode'), 'Payment_Mode', state.lists.Payment_Mode, 'Cash', false);
   refreshLedgerPartyOptions();
+  renderLedgerOverview_();
   loadReminders_();
+}
+
+/* ---------- Khata: stats + customer overview (sirf Customer parties) ----------
+   Balance ke nishan Code.gs ke partyBalanceDelta_ se bilkul waisay hi:
+   Customer ka 'Debit'  = udhaar diya  (balance upar),
+   Customer ka 'Credit' = paisay wasool (balance neeche). */
+async function renderLedgerOverview_() {
+  const statsBox = $('ledStats');
+  if (!statsBox) return;
+  try {
+    const entries = await fetchAllLedger_();
+    if (!state.customers.length && can('getCustomers')) {
+      try { const cd = await api('getCustomers'); state.customers = cd.customers || []; } catch (e) {}
+    }
+    const today = dayKey_(new Date());
+    let udhaar = 0, wasool = 0, wasoolToday = 0;
+    const byParty = {};
+    entries.forEach(e => {
+      if (String(e.Party_Type) !== 'Customer') return;
+      const amt = num(e.Amount);
+      if (e.Type === 'Debit') udhaar += amt;
+      else if (e.Type === 'Credit') {
+        wasool += amt;
+        if (dayKey_(e.Date) === today) wasoolToday += amt;
+      }
+      const id = String(e.Party_ID);
+      if (!byParty[id]) byParty[id] = { latest: null, latestKey: '', dueKey: '' };
+      const g = byParty[id];
+      const dk = dayKey_(e.Date);
+      if (!g.latest || dk >= g.latestKey) { g.latest = e; g.latestKey = dk; }
+      const due = dayKey_(e.Due_Date);
+      if (due && due > g.dueKey) g.dueKey = due;
+    });
+    let baqaya = 0, overCount = 0, overSum = 0;
+    Object.keys(byParty).forEach(id => {
+      const g = byParty[id];
+      const bal = g.latest ? num(g.latest.Balance_After) : 0;
+      if (bal <= 0) return;
+      baqaya += bal;
+      const eff = ledEffectiveDue_(customerById(id), g.dueKey);
+      if (eff.key && eff.key < today) { overCount++; overSum += bal; }
+    });
+    statsBox.innerHTML =
+      statCard('💰 Kul Baqaya (Market Mein)', money(baqaya), 'warn') +
+      statCard('📤 Kul Udhaar Diya', money(udhaar)) +
+      statCard('📥 Kul Wasool Hua', money(wasool), 'profit') +
+      statCard('🟢 Aaj ki Wasooli', money(wasoolToday), 'profit') +
+      statCard('🔴 Overdue', overCount + ' parties — ' + money(overSum), 'warn');
+    ledCustData = state.customers.map(c => {
+      const g = byParty[String(c.Customer_ID)];
+      return { cust: c, balance: g && g.latest ? num(g.latest.Balance_After) : 0 };
+    }).sort((a, b) => b.balance - a.balance);
+    renderLedgerCustList_();
+  } catch (e) { /* overview best-effort hai — module phir bhi chalta rahe */ }
+}
+function renderLedgerCustList_() {
+  const box = $('ledCustList');
+  if (!box) return;
+  const qEl = $('ledSearch');
+  const q = qEl ? qEl.value.trim().toLowerCase() : '';
+  const qd = q.replace(/[^0-9]/g, '');
+  const rows = (ledCustData || []).filter(r => {
+    if (!q) return true;
+    if ((r.cust.Name || '').toLowerCase().indexOf(q) > -1) return true;
+    if (String(r.cust.Phone || '').toLowerCase().indexOf(q) > -1) return true;
+    return qd !== '' && String(r.cust.Phone || '').replace(/[^0-9]/g, '').indexOf(qd) > -1;
+  });
+  if (!rows.length) {
+    box.innerHTML = '<p class="empty-msg">Koi customer nahi mila.</p>';
+    return;
+  }
+  box.innerHTML = rows.map(r =>
+    '<div class="led-cust-row" data-led-cust="' + esc(r.cust.Customer_ID) + '">' + custAvatar_(r.cust) +
+    '<span class="grow"><b>' + esc(r.cust.Name) + '</b><br><span class="small muted">' + esc(r.cust.Phone || '') + '</span></span>' +
+    '<span class="pill blue">' + esc(personType_(r.cust)) + '</span>' +
+    (r.balance > 0
+      ? '<span class="led-bal-owe">Baqaya: ' + money(r.balance) + '</span>'
+      : '<span class="led-bal-clear">Clear ✅</span>') +
+    '</div>').join('');
+  box.querySelectorAll('[data-led-cust]').forEach(row => row.addEventListener('click', () =>
+    openReminderParty_('Customer|' + row.getAttribute('data-led-cust'))));
 }
 
 /* ---------- Khata: payment reminders (due date alerts) ---------- */
@@ -2019,8 +2162,7 @@ async function loadReminders_() {
   const box = $('ledReminders');
   if (!box) return;
   try {
-    const d = await api('getLedger', {});
-    const entries = d.entries || [];
+    const entries = await fetchAllLedger_();
     if (!state.customers.length && can('getCustomers')) {
       try { const cd = await api('getCustomers'); state.customers = cd.customers || []; } catch (e) {}
     }
@@ -2040,18 +2182,23 @@ async function loadReminders_() {
     Object.keys(byParty).forEach(key => {
       const g = byParty[key];
       const balance = g.latest ? num(g.latest.Balance_After) : 0;
-      if (balance <= 0 || !g.dueKey) return;
-      const diff = Math.round((new Date(g.dueKey + 'T00:00:00').getTime() - todayMs) / 86400000);
-      if (diff > 3) return;
+      if (balance <= 0) return;
       const cust = g.type === 'Customer' ? customerById(g.id) : null;
+      // Customer ki maahana Payment_Day wali date bhi due mein shamil hai —
+      // entry ki Due_Date aur maahana date mein se jo pehle aaye, wahi lagegi.
+      const eff = g.type === 'Customer' ? ledEffectiveDue_(cust, g.dueKey) : { key: g.dueKey || '', monthly: false };
+      if (!eff.key) return;
+      const diff = Math.round((new Date(eff.key + 'T00:00:00').getTime() - todayMs) / 86400000);
+      if (diff > 3) return;
       let cls, label, rank;
       if (diff < 0) { cls = 'rem-overdue'; label = Math.abs(diff) + ' din late'; rank = 0; }
       else if (diff === 0) { cls = 'rem-today'; label = 'Aaj last date'; rank = 1; }
       else { cls = 'rem-soon'; label = diff + ' din baqi'; rank = 2; }
+      if (eff.monthly) label += ' (Maahana date)';
       rows.push({
         key: key, cls: cls, rank: rank, diff: diff,
         name: cust ? cust.Name : String(g.id),
-        balance: balance, due: g.dueKey, label: label
+        balance: balance, due: eff.key, label: label
       });
     });
     rows.sort((a, b) => (a.rank - b.rank) || (a.diff - b.diff));
@@ -2207,6 +2354,8 @@ async function loadLedger() {
       '</tbody></table>' : '<p class="empty-msg">No ledger entries for this party yet.</p>';
     wrap.querySelectorAll('[data-inv]').forEach(b => b.addEventListener('click', () =>
       showInvoiceDetail_(b.getAttribute('data-inv'))));
+    invalidateLedgerCache_();
+    renderLedgerOverview_();
     loadReminders_();
   } catch (e) { toast(e.message, 'error'); }
 }
@@ -2247,6 +2396,87 @@ function ledgerWhatsApp() {
   if (!p || !p.phone) { toast('Load a customer ledger with a phone number first.', 'error'); return; }
   const cust = customerById(p.id) || { Name: p.name, Phone: p.phone, Current_Credit_Balance: 0, Payment_Due_Date: '' };
   window.open(waLink(p.phone, ledgerReminderText(cust)), '_blank');
+}
+
+/* ---------- Khata: Add New Khata / Customer (alag page) ---------- */
+const knPhotos = { profile: null, cnicFront: null, cnicBack: null, guarantor: null };
+function knWirePhoto_(inputEl, previewEl, key) {
+  if (!inputEl) return;
+  inputEl.addEventListener('change', () => {
+    const f = inputEl.files && inputEl.files[0];
+    if (!f) return;
+    if (f.size > 3 * 1024 * 1024) { toast('Photo 3MB se chhoti rakhein.', 'error'); inputEl.value = ''; return; }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = String(reader.result || '');
+      knPhotos[key] = { base64: dataUrl.split(',')[1] || '', type: f.type || 'image/jpeg' };
+      if (previewEl) { previewEl.src = dataUrl; previewEl.hidden = false; }
+      toast('📷 Photo tayyar hai — Save dabane par attach ho jayegi.', 'success');
+    };
+    reader.readAsDataURL(f);
+  });
+}
+function resetKhataNewForm_() {
+  ['kn_Name', 'kn_Phone', 'kn_Email', 'kn_ReferenceBy', 'kn_GName', 'kn_GPhone',
+   'kn_PaymentDay', 'kn_DueDate'].forEach(id => { const el = $(id); if (el) el.value = ''; });
+  const lim = $('kn_CreditLimit'); if (lim) lim.value = '50000';
+  const type = $('kn_Type'); if (type) type.value = 'Customer';
+  const ch = $('kn_Channel'); if (ch) ch.value = 'Offline';
+  ['kn_PhotoFile', 'kn_CnicFrontFile', 'kn_CnicBackFile', 'kn_GPhotoFile'].forEach(id => { const el = $(id); if (el) el.value = ''; });
+  ['kn_PhotoPreview', 'kn_CnicFrontPreview', 'kn_CnicBackPreview', 'kn_GPhotoPreview'].forEach(id => {
+    const el = $(id); if (el) { el.hidden = true; el.removeAttribute('src'); }
+  });
+  knPhotos.profile = null; knPhotos.cnicFront = null; knPhotos.cnicBack = null; knPhotos.guarantor = null;
+  const err = $('knError'); if (err) err.hidden = true;
+}
+function openKhataNew_() {
+  if (!can('saveCustomer')) { toast('Your role cannot add customers.', 'error'); return; }
+  MODULES.forEach(m => { const el = $('mod-' + m.id); if (el) el.hidden = true; });
+  const sec = $('module-khata-new');
+  if (sec) sec.hidden = false;
+  $('topbarTitle').textContent = '➕ Add New Khata / Customer';
+  resetKhataNewForm_();
+  window.scrollTo(0, 0);
+}
+async function submitKhataNew_() {
+  const errBox = $('knError');
+  if (errBox) errBox.hidden = true;
+  const name = $('kn_Name').value.trim();
+  const phone = $('kn_Phone').value.trim();
+  if (!name || !phone) {
+    if (errBox) { errBox.textContent = 'Naam aur Mobile Number lazmi hain.'; errBox.hidden = false; }
+    toast('Naam aur Mobile Number lazmi hain.', 'error');
+    return;
+  }
+  const type = $('kn_Type').value;
+  const payload = {
+    Name: name, Phone: phone, Email: $('kn_Email').value.trim(),
+    Person_Type: type, Channel: $('kn_Channel').value,
+    Price_Tier: type === 'Shopkeeper' ? 'Shopkeeper' : 'Retail',
+    Credit_Limit: num($('kn_CreditLimit').value),
+    Reference_By: $('kn_ReferenceBy').value.trim(),
+    Guarantor_Name: $('kn_GName').value.trim(),
+    Guarantor_Phone: $('kn_GPhone').value.trim(),
+    Status: 'Active'
+  };
+  const pd = num($('kn_PaymentDay').value);
+  if (pd >= 1 && pd <= 31) payload.Payment_Day = pd;
+  if ($('kn_DueDate').value) payload.Payment_Due_Date = $('kn_DueDate').value;
+  if (knPhotos.profile) { payload.photoBase64 = knPhotos.profile.base64; payload.photoContentType = knPhotos.profile.type; }
+  if (knPhotos.cnicFront) { payload.cnicFrontBase64 = knPhotos.cnicFront.base64; payload.cnicFrontContentType = knPhotos.cnicFront.type; }
+  if (knPhotos.cnicBack) { payload.cnicBackBase64 = knPhotos.cnicBack.base64; payload.cnicBackContentType = knPhotos.cnicBack.type; }
+  if (knPhotos.guarantor) { payload.guarantorPhotoBase64 = knPhotos.guarantor.base64; payload.guarantorPhotoContentType = knPhotos.guarantor.type; }
+  try {
+    await queueWrite('saveCustomer', payload);
+    toast('✅ Naya khata ban gaya — ' + name, 'success');
+    try { const cd = await api('getCustomers'); state.customers = cd.customers || []; } catch (e) {}
+    showModule('ledger');
+    const digits = s => String(s || '').replace(/[^0-9]/g, '');
+    const nc = state.customers.find(c => digits(c.Phone) !== '' && digits(c.Phone) === digits(phone));
+    if (nc) openReminderParty_('Customer|' + nc.Customer_ID);
+  } catch (e) {
+    if (errBox) { errBox.textContent = e.message; errBox.hidden = false; }
+  }
 }
 
 /* ========================== 16. EXPENSES ================================ */
@@ -2581,7 +2811,13 @@ function groupCode_(g) {
   const i = unreg.indexOf(g);
   return 'Z' + (1 + (i < 0 ? unreg.length : i));
 }
-function codeBadge_(code) { return code ? '<span class="code-badge">' + esc(code) + '</span> ' : ''; }
+function codeBadge_(code) { return code ? '<span class="code-badge" style="background:' + codeColor_(code) + '">' + esc(code) + '</span> ' : ''; }
+/* Builder column ke title ke aage us group ke rang ka chhota dot. */
+function bTitle_(id, text, letter) {
+  const el = $(id);
+  if (!el) return;
+  el.innerHTML = (letter ? '<span class="b-dot" style="background:' + codeColor_(letter) + '"></span>' : '') + esc(text);
+}
 /* Code quick-jump: Step 1 mein code likho (D, A2, A2.1, B3, Z1…) aur
    builder seedha usi list / category par le jata hai. */
 function jumpToCode_(raw) {
@@ -2638,18 +2874,16 @@ function jumpToCode_(raw) {
 }
 function bHomeNoteHtml_(group) {
   const code = groupCode_(group);
+  const style = ' style="border-left:5px solid ' + codeColor_(code) + '"';
   if (bState.mode === 'categories') {
-    return '<div class="b-home-note">✅ Ye Asli Sub Categories hain (Code ' + code + ') — nayi sub category yahin add karein.</div>';
+    return '<div class="b-home-note"' + style + '>✅ Ye Asli Sub Categories hain (Code ' + code + ') — nayi sub category yahin add karein.</div>';
   }
   if (BUILDER_PAGE_LISTS[bState.mode]) {
-    if (group === 'Sub_Category') {
-      return '<div class="b-home-note">🔗 Ye Shortcut hai — asli list 🏷️ Categories mein hai (Code ' + code + '). Nayi entry wahan add karein. ' +
-        '<button type="button" class="btn btn-ghost btn-sm" data-b-jump="categories">➡️ Asli List Par Jayein</button></div>';
-    }
-    return '<div class="b-home-note">🔗 Ye Shortcut hai — asli list 📋 Baqi Saari Lists mein hai (Code ' + code + '). ' +
-      '<button type="button" class="btn btn-ghost btn-sm" data-b-jump="all">➡️ Asli List Par Jayein</button></div>';
+    const jump = group === 'Sub_Category' ? 'categories' : 'all';
+    return '<div class="b-home-note"' + style + '>🔗 Ye Shortcut hai — yahan se add/edit ki hui har cheez ASLI list (Code ' + code + ') mein hi save hoti hai — data kahin miss nahi hota. ' +
+      '<button type="button" class="btn btn-ghost btn-sm" data-b-jump="' + jump + '">➡️ Asli List Par Jayein</button></div>';
   }
-  return '<div class="b-home-note">✅ Ye Asli List hai (Code ' + code + ') — nayi entries yahin add karein.</div>';
+  return '<div class="b-home-note"' + style + '>✅ Ye Asli List hai (Code ' + code + ') — nayi entries yahin add karein.</div>';
 }
 function builderMainSet_() {
   const s = {};
@@ -2693,9 +2927,9 @@ function bActionBtns_(group, item, items, li, canEdit) {
     '<button type="button" class="btn btn-ghost btn-sm icon-btn" title="Rename" aria-label="Rename" data-b-rename="' + esc(item.row.value) + '" data-b-group="' + esc(group) + '">✏️</button>' +
     '<button type="button" class="btn btn-danger btn-sm icon-btn" title="Delete" aria-label="Delete" data-b-del="' + esc(item.row.value) + '" data-b-group="' + esc(group) + '">🗑</button>';
 }
-function bValueRowsHtml_(group, items, canEdit, hideNotes, codeFn) {
+function bValueRowsHtml_(group, items, canEdit, hideNotes, codeFn, rowPrefix) {
   return items.map((item, li) =>
-    '<div class="b-row"><span class="grow">' + codeBadge_(codeFn ? codeFn(item, li) : '') + esc(item.row.value) +
+    '<div class="b-row"><span class="grow">' + (rowPrefix || '') + codeBadge_(codeFn ? codeFn(item, li) : '') + esc(item.row.value) +
     (!hideNotes && item.row.notes ? ' <span class="muted small">— ' + esc(item.row.notes) + '</span>' : '') + '</span>' +
     bActionBtns_(group, item, items, li, canEdit) + '</div>').join('');
 }
@@ -2734,7 +2968,11 @@ async function builderAdd_(btn) {
   if (notes) payload.Notes = notes;
   try {
     await queueWrite('saveSetting', payload);
-    toast('Added "' + v + '".', 'success');
+    if (BUILDER_PAGE_LISTS[bState.mode]) {
+      toast('✅ Asli list mein save ho gaya (Code ' + groupCode_(payload.Group) + ')', 'success');
+    } else {
+      toast('Added "' + v + '".', 'success');
+    }
     loadSettingsModule();
   } catch (e) {}
 }
@@ -2789,7 +3027,7 @@ function renderBuilderCategories_(c1, c2, c3) {
   const canEdit = can('saveSetting');
   const mains = settingsRows('Main_Category');
   const mainItems = mains.map((r, i) => ({ row: r, gi: i }));
-  $('bCol1Title').textContent = 'STEP 2 — Main Category';
+  bTitle_('bCol1Title', 'STEP 2 — Main Category', 'A');
   const mainLetter = groupCode_('Main_Category');
   const mainPos = mainItems.findIndex(it => it.row.value === bState.main);
   const mainCode = bState.main === '__none__' ? '' : (mainPos > -1 ? mainLetter + (mainPos + 1) : '');
@@ -2806,8 +3044,8 @@ function renderBuilderCategories_(c1, c2, c3) {
   if (canEdit) h += bAddHtml_('Main_Category', 'Nayi Main Category likhein…', '');
   c1.innerHTML = h;
 
-  $('bCol2Title').textContent = 'STEP 3 — Sub Categories' +
-    (bState.main === '__none__' ? ' (General)' : (bState.main ? ' of ' + bState.main : ''));
+  bTitle_('bCol2Title', 'STEP 3 — Sub Categories' +
+    (bState.main === '__none__' ? ' (General)' : (bState.main ? ' of ' + bState.main : '')), 'B');
   if (!bState.main) {
     c2.innerHTML = '<p class="b-hint">👈 Pehle Step 2 se ek Main Category chunein</p>';
   } else {
@@ -2820,7 +3058,7 @@ function renderBuilderCategories_(c1, c2, c3) {
     c2.innerHTML = h2;
   }
 
-  $('bCol3Title').textContent = 'STEP 4 — Mazeed Categories' + (bState.sub ? ' of ' + bState.sub : '');
+  bTitle_('bCol3Title', 'STEP 4 — Mazeed Categories' + (bState.sub ? ' of ' + bState.sub : ''), 'C');
   if (!bState.sub) {
     c3.innerHTML = '<p class="b-hint">👈 Pehle Step 3 se ek Sub Category chunein</p>';
     return;
@@ -2841,28 +3079,32 @@ function renderBuilderCategories_(c1, c2, c3) {
 }
 function renderBuilderGroupCol_(c2, c3, infoText) {
   const group = bState.group;
-  $('bCol3Title').textContent = 'STEP 4 — Maloomat';
+  const isPageMode = !!BUILDER_PAGE_LISTS[bState.mode];
+  bTitle_('bCol3Title', 'STEP 4 — Maloomat', group ? groupCode_(group) : '');
   let info = '<div class="b-info"><p>👀 <b>Ye list website par kahan nazar aati hai</b></p>' +
     '<p class="small">' + esc(infoText || '') + '</p>';
-  if (group === 'Sub_Category' && BUILDER_PAGE_LISTS[bState.mode]) {
+  if (group === 'Sub_Category' && isPageMode) {
     info += '<p class="small">Is page par sirf is page ki categories ke products nazar aate hain.</p>';
   }
   c3.innerHTML = info + '</div>';
   if (!group) {
-    $('bCol2Title').textContent = 'STEP 3 — List ki Values';
+    bTitle_('bCol2Title', 'STEP 3 — List ki Values', '');
     c2.innerHTML = '<p class="b-hint">👈 Pehle Step 2 se ek list chunein</p>';
     return;
   }
   const readOnly = group === 'Drive_Folder' || group === 'System';
   const canEdit = can('saveSetting') && !readOnly;
-  $('bCol2Title').textContent = 'STEP 3 — ' + groupLabel_(group);
+  bTitle_('bCol2Title', 'STEP 3 — ' + groupLabel_(group), groupCode_(group));
   const rows = settingsRows(group);
   const items = rows.map((r, i) => ({ row: r, gi: i }));
-  let h = bHomeNoteHtml_(group) + bValueRowsHtml_(group, items, canEdit, false, (item, li) => groupCode_(group) + (li + 1));
+  const rowPrefix = isPageMode ? '<span class="shortcut-badge" title="Shortcut">🔗</span> ' : '';
+  let h = bHomeNoteHtml_(group) + bValueRowsHtml_(group, items, canEdit, false, (item, li) => groupCode_(group) + (li + 1), rowPrefix);
   if (!rows.length) h += '<p class="b-hint">Ye list abhi khaali hai — neeche se pehli value add karein.</p>';
   if (group === 'Sub_Category') h += '<p class="small muted b-note">Note: Sub Categories ki Main Category ke saath jod 🏷️ Categories wale Step 1 se hoti hai.</p>';
   if (readOnly) h += '<p class="small muted b-note">Ye list system chalata hai (Setup.gs / triggers) — sirf dekhne ke liye hai.</p>';
-  if (canEdit) h += bAddHtml_(group, 'Add a new value to ' + groupLabel_(group) + '…', '');
+  if (canEdit) h += bAddHtml_(group, isPageMode
+    ? 'Yahan add karein — asli list (Code ' + groupCode_(group) + ') mein save hoga…'
+    : 'Add a new value to ' + groupLabel_(group) + '…', '');
   c2.innerHTML = h;
 }
 function renderBuilderPage_(c1, c2, c3) {
@@ -3125,6 +3367,14 @@ function bindEvents() {
   $('ledLoadBtn').addEventListener('click', loadLedger);
   $('ledAddBtn').addEventListener('click', submitLedgerEntry);
   $('ledWaBtn').addEventListener('click', ledgerWhatsApp);
+  $('ledAddKhata').addEventListener('click', openKhataNew_);
+  $('ledSearch').addEventListener('input', renderLedgerCustList_);
+  $('knBack').addEventListener('click', () => showModule('ledger'));
+  $('knSave').addEventListener('click', submitKhataNew_);
+  knWirePhoto_($('kn_PhotoFile'), $('kn_PhotoPreview'), 'profile');
+  knWirePhoto_($('kn_CnicFrontFile'), $('kn_CnicFrontPreview'), 'cnicFront');
+  knWirePhoto_($('kn_CnicBackFile'), $('kn_CnicBackPreview'), 'cnicBack');
+  knWirePhoto_($('kn_GPhotoFile'), $('kn_GPhotoPreview'), 'guarantor');
   // Expenses
   $('expAddBtn').addEventListener('click', submitExpense);
   $('expMode').addEventListener('change', syncExpBank_);

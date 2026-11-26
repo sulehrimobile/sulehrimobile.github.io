@@ -343,3 +343,23 @@ tr.low-stock:hover td{background:#FFEDD5}
 .reg-report h3 { margin: 0; }
 .reg-counts { display: flex; gap: .6rem; flex-wrap: wrap; margin: .6rem 0; }
 .reg-counts .stat-card { flex: 1 1 105px; }
+
+/* ===== v2.5: code colors (builder dots) ===== */
+.b-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: .45rem; vertical-align: middle; box-shadow: 0 0 0 2px rgba(255,255,255,.35); }
+
+/* ===== v2.5: Khata single-page (stats / toolbar / customer list) ===== */
+#ledStats { margin: 0 0 1rem; }
+.led-toolbar { margin-bottom: 1rem; }
+.led-toolbar input { flex: 1 1 260px; }
+.led-cust-list { display: flex; flex-direction: column; gap: .45rem; margin-bottom: 1rem; }
+.led-cust-row { display: flex; align-items: center; gap: .7rem; background: var(--white); border: 1px solid var(--line); border-radius: 12px; padding: .55rem .8rem; cursor: pointer; box-shadow: var(--shadow-sm); }
+.led-cust-row:hover { border-color: var(--blue); }
+.led-cust-row:active { transform: scale(.99); }
+.led-cust-row .grow { min-width: 0; }
+.led-bal-owe { color: var(--coral); font-weight: 800; white-space: nowrap; }
+.led-bal-clear { color: var(--emerald); font-weight: 700; white-space: nowrap; }
+
+/* ===== v2.5: Add New Khata form ===== */
+.khata-form { display: grid; grid-template-columns: 1fr 1fr; gap: .4rem 1rem; }
+.khata-form fieldset { grid-column: 1 / -1; }
+@media(max-width: 640px) { .khata-form { grid-template-columns: 1fr; } }
