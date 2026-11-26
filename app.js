@@ -1290,6 +1290,16 @@ async function init() {
     a.href = 'https://wa.me/' + CONFIG.WHATSAPP_NUMBER + '?text=' +
       encodeURIComponent('Assalam-o-Alaikum! Mujhe ' + a.dataset.waService + ' ki service chahiye. Mera phone/model: ');
   });
+  const partReqBtn = $('partReqBtn');
+  if (partReqBtn) {
+    partReqBtn.addEventListener('click', () => {
+      const partName = (($('partReqInput') || {}).value || '').trim();
+      const text = partName
+        ? 'Assalam-o-Alaikum! Mujhe ye part chahiye: ' + partName
+        : 'Assalam-o-Alaikum! Mujhe ek part chahiye. Tafseel ye hai: ';
+      window.open('https://wa.me/' + CONFIG.WHATSAPP_NUMBER + '?text=' + encodeURIComponent(text), '_blank', 'noopener');
+    });
+  }
   applyTheme(document.documentElement.dataset.theme || 'ocean');
   updateAuthUI(); renderTargetBar(); renderCart();
   $('homeGrid').innerHTML = skeletonCards(4);

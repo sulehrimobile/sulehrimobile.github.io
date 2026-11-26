@@ -2,7 +2,7 @@
    App shell: cache-first. API calls (Google Apps Script): network only,
    never cached, so prices/stock are always live. */
 'use strict';
-const CACHE_NAME = 'sulehri-mobile-v2';
+const CACHE_NAME = 'sulehri-mobile-v3';
 const APP_SHELL = ['./', './index.html', './mobile.html', './accessories.html', './parts.html', './repairing.html', './styles.css', './app.js', './manifest.json', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', event => {
