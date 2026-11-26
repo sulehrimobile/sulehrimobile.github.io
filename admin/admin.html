@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="admin.css?v=27">
+<link rel="stylesheet" href="admin.css?v=28">
 </head>
 <body>
 
@@ -85,7 +85,7 @@
           <span class="small muted" id="dashPeriodNote"></span>
         </div>
         <div id="dashCharts" class="charts-grid"></div>
-        <div id="dashCards" class="cards-grid"></div>
+        <div id="dashCards" class="sum-grid"></div>
         <h3>⚠️ Low Stock — order soon</h3>
         <div id="dashLowStock" class="table-wrap"></div>
       </section>
@@ -291,6 +291,13 @@
           <input id="ledSearch" type="text" placeholder="🔍 Customer ka naam, number ya Registration No likhein…">
           <button type="button" class="btn btn-primary" id="ledAddKhata">➕ Add New Khata / Customer</button>
         </div>
+        <div class="filters-row led-filters" id="ledFilters">
+          <button type="button" class="reg-chip active" data-led-filter="all">Sab</button>
+          <button type="button" class="reg-chip" data-led-filter="customer">👤 Customers</button>
+          <button type="button" class="reg-chip" data-led-filter="shopkeeper">🏪 Shopkeepers</button>
+          <button type="button" class="reg-chip" data-led-filter="supplier">🏭 Suppliers</button>
+          <button type="button" class="reg-chip" id="ledToggleClear">✅ Clear Khate (0)</button>
+        </div>
         <div id="ledCustList" class="led-cust-list"></div>
         <div class="pos-grid">
           <div>
@@ -306,7 +313,7 @@
             <div id="ledTableWrap" class="table-wrap"></div>
             <div id="ledInvoiceDetail"></div>
           </div>
-          <div class="card">
+          <div class="card" id="ledAddCard">
             <h3>➕ Add Entry / Record Payment</h3>
             <div class="two-col">
               <label>Type <select id="ledType"></select></label>
@@ -319,6 +326,7 @@
             <label>Reference Note <input id="ledNote" type="text" placeholder="e.g. Payment received — thank you"></label>
             <div class="field"><label>Invoice No (optional)</label><input id="ledInvoiceNo" type="text" placeholder="e.g. ORD-1001 ya REP-1001"></div>
             <button id="ledAddBtn" class="btn btn-primary btn-block" type="button">Save Entry</button>
+            <p id="ledPermHint" class="small muted" hidden>ℹ️ Aap nayi entry (udhaar) add kar sakte hain — payment/wasooli ki entry ke liye Owner/Manager ki permission chahiye.</p>
             <p id="ledMsg" class="success-text" hidden></p>
           </div>
         </div>
@@ -682,6 +690,6 @@
 
 <div id="toastWrap" class="toast-wrap" aria-live="polite"></div>
 
-<script src="admin.js?v=27"></script>
+<script src="admin.js?v=28"></script>
 </body>
 </html>

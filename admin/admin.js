@@ -126,8 +126,8 @@ const ACTION_ROLES = {
   createRepairJob: ALL_STAFF, getRepairs: ALL_STAFF, updateRepair: ALL_STAFF,
   addRepairParts: ['Owner', 'Manager', 'Technician'],
   recordRepairPayment: ['Owner', 'Manager', 'Staff', 'Account_Manager'],
-  getLedger: ['Owner', 'Account_Manager'],
-  addLedgerEntry: ['Owner', 'Account_Manager'],
+  getLedger: ['Owner', 'Manager', 'Staff', 'Account_Manager'],
+  addLedgerEntry: ['Owner', 'Manager', 'Staff', 'Account_Manager'],
   addExpense: ['Owner', 'Account_Manager'],
   getExpenses: ['Owner', 'Account_Manager', 'Manager'],
   getPnL: ['Owner', 'Account_Manager'], getDashboard: ['Owner', 'Account_Manager'],
@@ -184,6 +184,13 @@ function esc(v) {
 }
 function num(v) { const n = Number(v); return isNaN(n) ? 0 : n; }
 function money(v) { return 'PKR ' + Math.round(num(v)).toLocaleString('en-PK'); }
+/* Sheet ki artefact (formula-only, khaali) rows ko products se hamesha
+   bahar rakho — jin ke paas na Product_ID hai na Name, wo asal product
+   nahi hain aur kahin nazar nahi aane chahiye (Inventory / POS / Low Stock). */
+function realProducts_(arr) {
+  return (arr || []).filter(p => p &&
+    (String(p.Product_ID || '').trim() !== '' || String(p.Name || '').trim() !== ''));
+}
 function isTrue(v) { return v === true || v === 1 || String(v).toUpperCase() === 'TRUE' || String(v) === '1'; }
 function todayISO() { return new Date().toISOString().slice(0, 10); }
 function daysAgoISO(n) { const d = new Date(); d.setDate(d.getDate() - n); return d.toISOString().slice(0, 10); }
@@ -949,20 +956,47 @@ function pnlCards(p, prefix) {
     statCard(prefix + ' Bank', money(p.Bank)) +
     statCard(prefix + ' Wallet (EasyPaisa/JazzCash)', money(p.Wallet));
 }
+/* Dashboard ke do bare summary boxes: ek Aaj ka, ek Maah + Kul Jama ka.
+   Har row: label bayein, value dayein, neeche divider line. */
+function sumRow_(label, value, cls) {
+  return '<div class="sum-row"><span class="sum-label">' + esc(label) +
+    '</span><b class="sum-val' + (cls ? ' ' + cls : '') + '">' + esc(value) + '</b></div>';
+}
+function sumCard_(title, rowsHtml) {
+  return '<div class="sum-card"><h3>' + esc(title) + '</h3>' + rowsHtml + '</div>';
+}
 async function loadDashboard() {
   if (!can('getDashboard')) return;
   try {
     const d = await api('getDashboard');
     state.pnl = d;
+    const t = d.today || {}, m = d.thisMonth || {};
+    const npCls = v => num(v) >= 0 ? 'lime' : 'red';
     $('dashCards').innerHTML =
-      pnlCards(d.today, 'Today') + pnlCards(d.thisMonth, 'Month') +
-      statCard('Total Receivables (customers owe us)', money(d.Total_Receivables), 'warn') +
-      statCard('Total Payables (we owe suppliers)', money(d.Total_Payables), 'warn');
+      sumCard_('📅 Aaj ka Status — Today',
+        sumRow_('Sales', money(t.Sales)) +
+        sumRow_('Repair Income', money(t.Repair_Income)) +
+        sumRow_('Expenses', money(t.Total_Expenses), 'red') +
+        sumRow_('Net Profit', money(t.Net_Profit), npCls(t.Net_Profit)) +
+        sumRow_('Cash in Hand', money(t.Cash)) +
+        sumRow_('Bank', money(t.Bank)) +
+        sumRow_('Wallet (EasyPaisa/JazzCash)', money(t.Wallet))) +
+      sumCard_('🗓️ Is Maah — Month & Kul Jama',
+        sumRow_('Month Sales', money(m.Sales)) +
+        sumRow_('Repair Income', money(m.Repair_Income)) +
+        sumRow_('Expenses', money(m.Total_Expenses), 'red') +
+        sumRow_('Net Profit', money(m.Net_Profit), npCls(m.Net_Profit)) +
+        sumRow_('Cash in Hand', money(m.Cash)) +
+        sumRow_('Bank', money(m.Bank)) +
+        sumRow_('Wallet (EasyPaisa/JazzCash)', money(m.Wallet)) +
+        '<div class="sum-divider"></div>' +
+        sumRow_('Total Receivables (customers owe us)', money(d.Total_Receivables), 'warn') +
+        sumRow_('Total Payables (we owe suppliers)', money(d.Total_Payables), 'warn'));
   } catch (e) { toast(e.message, 'error'); }
   loadDashboardCharts();
   try {
     const pd = await api('getProducts', { lowStockOnly: true });
-    const low = pd.products || [];
+    const low = realProducts_(pd.products);
     state.products = state.products.length ? state.products : low;
     $('dashLowStock').innerHTML = low.length ? productTable(low, { compact: true }) :
       '<p class="empty-msg">🎉 Nothing is low on stock.</p>';
@@ -1231,7 +1265,7 @@ function productTable(products, opts) {
 let posLoaded = false;
 async function loadPOS() {
   fillSelectCoded($('posPayment'), 'Payment_Method', state.lists.Payment_Method, 'Cash', false);
-  try { const d = await api('getProducts'); state.products = d.products || []; } catch (e) { toast(e.message, 'error'); }
+  try { const d = await api('getProducts'); state.products = realProducts_(d.products); } catch (e) { toast(e.message, 'error'); }
   if (can('getCustomers')) {
     try {
       const cd = await api('getCustomers');
@@ -1434,7 +1468,7 @@ async function posCheckout() {
       }
     }
     // Refresh stock quietly so the next bill sees fresh quantities.
-    api('getProducts').then(pd => { state.products = pd.products || state.products; }).catch(() => {});
+    api('getProducts').then(pd => { state.products = pd.products ? realProducts_(pd.products) : state.products; }).catch(() => {});
     $('posScan').focus();
   } catch (e) {
     // Restore the bill so the sale can be fixed and retried.
@@ -1455,7 +1489,7 @@ async function loadInventory() {
       category: $('invCategory').value,
       lowStockOnly: $('invLowOnly').checked
     });
-    state.products = d.products || [];
+    state.products = realProducts_(d.products);
     const wrap = $('invTableWrap');
     wrap.innerHTML = state.products.length ? productTable(state.products) : '<p class="empty-msg">No products found.</p>';
     bindProductTableActions(wrap);
@@ -1574,7 +1608,7 @@ function updatePurchaseTotal() {
 async function loadPurchases() {
   fillSelectCoded($('purPaymentMode'), 'Payment_Mode', state.lists.Payment_Mode, 'Cash', false);
   fillSelectCoded($('supPayMode'), 'Payment_Mode', state.lists.Payment_Mode, 'Cash', false);
-  try { const d = await api('getProducts'); state.products = d.products || []; } catch (e) { /* rows still work for new products */ }
+  try { const d = await api('getProducts'); state.products = realProducts_(d.products); } catch (e) { /* rows still work for new products */ }
   if (!$('purItems').children.length) addPurchaseRow();
   updatePurchaseTotal();
 }
@@ -1679,7 +1713,7 @@ async function loadReturns() {
   fillSelectCoded($('retAction'), 'RMA_Action', state.lists.RMA_Action, 'Refund', false);
   fillSelectCoded($('retCondition'), 'Stock_Condition', state.lists.Stock_Condition, 'Resellable', false);
   try {
-    const pd = await api('getProducts'); state.products = pd.products || [];
+    const pd = await api('getProducts'); state.products = realProducts_(pd.products);
     fillSelect($('retProductSel'), state.products.map(p => p.Product_ID), '', false);
     $('retProductSel').innerHTML = state.products.map(p =>
       '<option value="' + esc(p.Product_ID) + '">' + esc(p.Product_ID) + ' — ' + esc(productName(p)) + '</option>').join('');
@@ -1779,7 +1813,7 @@ function repairById(id) { return state.repairs.find(r => String(r.Job_ID) === St
 async function openRepairDrawer(jobId) {
   state.repairJobId = jobId;
   if (!productById('__none__') && !state.products.length && can('getProducts')) {
-    try { const d = await api('getProducts'); state.products = d.products || []; } catch (e) {}
+    try { const d = await api('getProducts'); state.products = realProducts_(d.products); } catch (e) {}
   }
   renderRepairDrawer();
   $('repairDrawer').hidden = false;
@@ -1866,7 +1900,7 @@ function renderRepairDrawer() {
       const d = await queueWrite('addRepairParts', { Job_ID: r.Job_ID, Items: [{ Product_ID: pid, Qty: qty }] });
       replaceRepair(d.repair);
       const pd = await api('getProducts').catch(() => null);
-      if (pd) state.products = pd.products || state.products;
+      if (pd) state.products = pd.products ? realProducts_(pd.products) : state.products;
       toast('Part added — totals recomputed. Balance due: ' + money(d.repair.Balance_Due), 'success');
       renderRepairDrawer(); loadRepairs();
     } catch (e) { /* queue toasted */ }
@@ -2085,6 +2119,11 @@ async function submitCustomerForm(ev) {
    entry save ho to loadLedger() cache invalidate kar deta hai. */
 let ledAllEntriesPromise = null;
 let ledCustData = [];
+/* Khata list ke filters: kind = all | customer | shopkeeper | supplier.
+   Default mein sirf baqaya (balance > 0) wale khate nazar aate hain;
+   clear khate ledShowClear toggle se dikhte hain. */
+let ledFilterKind = 'all';
+let ledShowClear = false;
 function fetchAllLedger_() {
   if (!ledAllEntriesPromise) {
     ledAllEntriesPromise = api('getLedger', {}).then(d => d.entries || [])
@@ -2111,8 +2150,20 @@ async function loadLedgerModule() {
   fillSelectCoded($('ledPartyType'), 'Party_Type', state.lists.Party_Type, $('ledPartyType').value || 'Customer', false);
   fillSelectCoded($('ledType'), 'Ledger_Type', state.lists.Ledger_Type, 'Credit', false);
   fillSelectCoded($('ledMode'), 'Payment_Mode', state.lists.Payment_Mode, 'Cash', false);
+  const hint = $('ledPermHint');
+  if (hint) hint.hidden = ledPrivileged_();
   refreshLedgerPartyOptions();
   renderLedgerOverview_();
+}
+/* Paisay KAM karne wali entry (wasooli / supplier payment) sirf Owner ya
+   Manager kar sakta hai — baqi roles sirf nayi (udhaar) entry add karenge. */
+function ledPrivileged_() {
+  const role = state.user ? state.user.Role : '';
+  return role === 'Owner' || role === 'Manager';
+}
+function ledReduces_(partyType, entryType) {
+  return (partyType === 'Customer' && entryType === 'Credit') ||
+    (partyType === 'Supplier' && entryType === 'Debit');
 }
 
 /* ---------- Khata: stats + customer overview (sirf Customer parties) ----------
@@ -2213,10 +2264,12 @@ async function renderLedgerOverview_() {
     renderLedgerCustList_();
   } catch (e) { /* overview best-effort hai — module phir bhi chalta rahe */ }
 }
-/* ---------- Khata: customer boxes (profile → reg no → baqaya → time → follow-up) ----------
-   Har party ek .kbox hai: avatar, Registration No + naam, Baqaya block,
-   time chip (due status), follow-up dropdown (sirf customers, balance > 0)
-   aur 📒 / ✏️ buttons. Box par click → neeche usi party ka khata khulta hai. */
+/* ---------- Khata: table-style list (profile → reg no → baqaya → time → follow-up) ----------
+   Upar .khead strip (column headings), neeche har party ek .krow: avatar,
+   Registration No + naam, Baqaya block, time chip (due status), follow-up
+   dropdown (sirf customers, balance > 0) aur 💵 / ➕ / 📒 / ✏️ buttons.
+   Row par click → neeche usi party ka khata khulta hai. Default mein sirf
+   baqaya wale khate nazar aate hain; clear khate toggle se dikhte hain. */
 const LED_FU_OPTS = [['', '— Follow-up —'], ['Called', '📞 Call ki'], ['WhatsApp', '💬 WhatsApp message'],
   ['Talked', '🤝 Baat ho gayi'], ['No Response', '🚫 Response nahi mila']];
 function followupSelectHtml_(cust) {
@@ -2244,13 +2297,50 @@ function bindFollowupSelects_(root) {
     });
   });
 }
+function ledKindOf_(r) {
+  if (r.kind === 'Supplier') return 'supplier';
+  if (r.kind === 'Customer') {
+    const pt = r.cust ? personType_(r.cust) : 'Customer';
+    return pt === 'Shopkeeper' ? 'shopkeeper' : 'customer';
+  }
+  return 'other';
+}
+/* Quick action: party ka khata kholo, Add Entry ka Type pehle se set karo
+   (pay = balance kam karne wali, add = balance badhane wali), phir Add
+   Entry card par scroll karke Amount par focus karo. */
+function ledPresetEntry_(r, mode) {
+  openReminderParty_(r.kind + '|' + r.id);
+  const want = mode === 'pay'
+    ? (r.kind === 'Supplier' ? 'Debit' : 'Credit')
+    : (r.kind === 'Supplier' ? 'Credit' : 'Debit');
+  const apply = () => {
+    const sel = $('ledType');
+    if (sel) sel.value = want;
+    const card = $('ledAddCard');
+    if (card) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const amt = $('ledAmount');
+    if (amt) amt.focus({ preventScroll: true });
+  };
+  apply();
+  setTimeout(apply, 400);
+  setTimeout(apply, 1000);
+}
 function renderLedgerCustList_() {
   const box = $('ledCustList');
   if (!box) return;
   const qEl = $('ledSearch');
   const q = qEl ? qEl.value.trim().toLowerCase() : '';
   const qd = q.replace(/[^0-9]/g, '');
-  const rows = (ledCustData || []).filter(r => {
+  const all = ledCustData || [];
+  const clearCount = all.filter(r => !(r.balance > 0)).length;
+  const tgl = $('ledToggleClear');
+  if (tgl) {
+    tgl.textContent = ledShowClear ? '🙈 Clear Chhupayein' : '✅ Clear Khate (' + clearCount + ')';
+    tgl.classList.toggle('active', ledShowClear);
+  }
+  const rows = all.filter(r => {
+    if (!ledShowClear && !(r.balance > 0)) return false;
+    if (ledFilterKind !== 'all' && ledKindOf_(r) !== ledFilterKind) return false;
     if (!q) return true;
     if ((r.name || '').toLowerCase().indexOf(q) > -1) return true;
     if (String(r.id || '').toLowerCase().indexOf(q) > -1) return true;
@@ -2258,39 +2348,63 @@ function renderLedgerCustList_() {
     return qd !== '' && String(r.phone || '').replace(/[^0-9]/g, '').indexOf(qd) > -1;
   });
   if (!rows.length) {
-    box.innerHTML = '<p class="empty-msg">Koi customer nahi mila.</p>';
+    box.innerHTML = '<p class="empty-msg">' + (all.length && !ledShowClear
+      ? 'Is filter mein koi baqaya wala khata nahi — ✅ Clear Khate button se clear khate dekhein.'
+      : 'Koi customer nahi mila.') + '</p>';
     return;
   }
-  box.innerHTML = rows.map((r, i) => {
+  const priv = ledPrivileged_();
+  let h = '<div class="khead"><span>Customer</span><span>Baqaya</span><span>Time</span><span>Follow-up</span><span>Actions</span></div>';
+  h += rows.map((r, i) => {
     const isCust = r.kind === 'Customer' && !!r.cust;
     const avatar = isCust ? custAvatar_(r.cust) :
       '<span class="cust-avatar cust-initial">' + (r.kind === 'Supplier' ? '🏭' : esc((r.name || '?').trim().charAt(0).toUpperCase() || '?')) + '</span>';
-    let h = '<div class="kbox" data-kbox="' + i + '">';
-    h += '<span class="kbox-avatar">' + avatar + '</span>';
+    let s = '<div class="krow" data-kbox="' + i + '">';
+    s += '<span class="kcell-cust"><span class="kbox-avatar">' + avatar + '</span>';
     if (isCust) {
-      h += '<span class="kbox-reg"><b>' + esc(r.cust.Customer_ID) + '</b>' +
+      s += '<span class="kbox-reg"><b>' + esc(r.cust.Customer_ID) + '</b>' +
         '<small>' + esc(r.name) + (r.phone ? ' • ' + esc(r.phone) : '') + '</small></span>';
     } else {
-      h += '<span class="kbox-reg"><b>' + esc(r.name) + '</b>' +
+      s += '<span class="kbox-reg"><b>' + esc(r.name) + '</b>' +
         '<small>' + (r.kind === 'Supplier' ? 'Supplier' : esc(r.kind)) + (r.phone ? ' • ' + esc(r.phone) : '') + '</small></span>';
     }
-    h += '<span class="kbox-bal"><small>Baqaya</small>' +
+    s += '</span>';
+    s += '<span class="kbox-bal"><small>Baqaya</small>' +
       (r.balance > 0 ? '<b class="kbox-owe">' + money(r.balance) + '</b>' : '<b class="kbox-clear">Clear ✅</b>') + '</span>';
     if (r.balance > 0 && r.label) {
       const chipCls = r.rank === 0 ? 'kchip kchip-over' : (r.rank === 1 ? 'kchip kchip-today' : 'kchip kchip-soon');
-      h += '<span class="' + chipCls + '">' + esc(r.label) +
-        '<small>Due: ' + fmtDate(r.due) + (r.monthly ? ' (Maahana date)' : '') + '</small></span>';
+      s += '<span class="kcell-time"><span class="' + chipCls + '">' + esc(r.label) +
+        '<small>Due: ' + fmtDate(r.due) + (r.monthly ? ' (Maahana date)' : '') + '</small></span></span>';
+    } else {
+      s += '<span class="kcell-time muted">—</span>';
     }
     if (isCust && r.balance > 0) {
-      h += '<span class="kbox-fu">' + followupSelectHtml_(r.cust) + '</span>';
+      s += '<span class="kbox-fu">' + followupSelectHtml_(r.cust) + '</span>';
+    } else {
+      s += '<span class="kbox-fu muted">—</span>';
     }
-    h += '<span class="kbox-actions">' +
+    s += '<span class="kbox-actions">' +
+      '<button type="button" class="icon-btn" data-kpay="' + i + '" title="' +
+        (priv ? 'Wasooli / Payment record karein' : '🔒 Paisay kam karna sirf Owner/Manager kar sakte hain') + '"' +
+        (priv ? '' : ' disabled') + '>💵</button>' +
+      '<button type="button" class="icon-btn" data-kadd="' + i + '" title="Nayi entry / Udhaar add karein">➕</button>' +
       '<button type="button" class="icon-btn" data-kbox-open="' + i + '" title="Khata kholein">📒</button>' +
       (isCust ? '<button type="button" class="icon-btn" data-kbox-edit="' + i + '" title="Poora form / Edit">✏️</button>' : '') +
       '</span>';
-    return h + '</div>';
+    return s + '</div>';
   }).join('');
+  box.innerHTML = h;
   bindFollowupSelects_(box);
+  box.querySelectorAll('[data-kpay]').forEach(b => b.addEventListener('click', ev => {
+    ev.stopPropagation();
+    const r = rows[Number(b.getAttribute('data-kpay'))];
+    if (r) ledPresetEntry_(r, 'pay');
+  }));
+  box.querySelectorAll('[data-kadd]').forEach(b => b.addEventListener('click', ev => {
+    ev.stopPropagation();
+    const r = rows[Number(b.getAttribute('data-kadd'))];
+    if (r) ledPresetEntry_(r, 'add');
+  }));
   box.querySelectorAll('[data-kbox-open]').forEach(b => b.addEventListener('click', ev => {
     ev.stopPropagation();
     const r = rows[Number(b.getAttribute('data-kbox-open'))];
@@ -2459,6 +2573,10 @@ async function submitLedgerEntry() {
   const amount = num($('ledAmount').value);
   if (!id) { toast('Load a party ledger first.', 'error'); return; }
   if (amount <= 0) { toast('Enter an amount greater than 0.', 'error'); return; }
+  if (ledReduces_(type, $('ledType').value) && !ledPrivileged_()) {
+    toast('🔒 Paisay kam karne wali entry sirf Owner/Manager kar sakte hain', 'error');
+    return;
+  }
   let note = $('ledNote').value.trim();
   const invNo = $('ledInvoiceNo') ? $('ledInvoiceNo').value.trim() : '';
   if (invNo) {
@@ -3491,6 +3609,13 @@ function bindEvents() {
   $('ledWaBtn').addEventListener('click', ledgerWhatsApp);
   $('ledAddKhata').addEventListener('click', openKhataNew_);
   $('ledSearch').addEventListener('input', renderLedgerCustList_);
+  document.querySelectorAll('#ledFilters [data-led-filter]').forEach(b => b.addEventListener('click', () => {
+    ledFilterKind = b.getAttribute('data-led-filter');
+    document.querySelectorAll('#ledFilters [data-led-filter]').forEach(x => x.classList.toggle('active', x === b));
+    renderLedgerCustList_();
+  }));
+  const ledTgl = $('ledToggleClear');
+  if (ledTgl) ledTgl.addEventListener('click', () => { ledShowClear = !ledShowClear; renderLedgerCustList_(); });
   $('knBack').addEventListener('click', () => showModule('ledger'));
   $('knSave').addEventListener('click', submitKhataNew_);
   knWirePhoto_($('kn_PhotoFile'), $('kn_PhotoPreview'), 'profile');

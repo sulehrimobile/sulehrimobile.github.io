@@ -65,6 +65,8 @@ button,input,select,textarea{font:inherit}
   display:inline-flex;align-items:center;justify-content:center;
 }
 .icon-btn:hover{border-color:var(--lime)}
+.icon-btn:disabled{opacity:.45;cursor:not-allowed}
+.icon-btn:disabled:hover{border-color:var(--border2)}
 input,select,textarea{
   min-height:44px;padding:.55rem .8rem;border:1px solid var(--border2);border-radius:13px;
   background:var(--well);color:#FFFFFF;width:100%;
@@ -172,6 +174,26 @@ tr.low-stock:hover td{background:rgba(251,191,36,.13)}
 .pill.green{background:rgba(185,246,56,.14);color:var(--lime)}.pill.red{background:var(--danger-bg);color:var(--danger)}
 .pill.amber{background:rgba(251,191,36,.14);color:var(--amber)}.pill.blue{background:var(--raised);color:#E5E7EB}
 .empty-msg{padding:1.2rem;text-align:center;color:var(--muted)}
+/* Zebra striping — sirf dark tones (#1C1F24 panel / #22252B raised);
+   low-stock ki amber nishaani halki si barqarar, olive tint khatam. */
+tbody tr:nth-child(even) td{background:#22252B}
+tbody tr.low-stock td{background:rgba(251,191,36,.05)}
+tbody tr.low-stock:hover td{background:rgba(251,191,36,.11)}
+
+/* ---------- Dashboard summary boxes (Aaj / Maah) ---------- */
+.sum-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem}
+@media(max-width:860px){.sum-grid{grid-template-columns:1fr}}
+.sum-card{background:var(--panel);border:1px solid var(--border);border-radius:22px;
+  box-shadow:var(--shadow-sm);padding:1rem 1.1rem}
+.sum-card h3{margin:.1rem 0 .45rem}
+.sum-row{display:flex;justify-content:space-between;align-items:center;gap:1rem;
+  padding:.42rem 0;border-bottom:1px solid var(--border)}
+.sum-card .sum-row:last-child{border-bottom:none}
+.sum-label{color:var(--muted2);font-weight:600;font-size:.9rem}
+.sum-val{font-family:var(--font-head);font-weight:800;color:#fff;font-variant-numeric:tabular-nums}
+.sum-val.red,.sum-val.warn{color:var(--danger)}
+.sum-val.lime{color:var(--lime)}
+.sum-divider{border-top:2px dashed var(--border2);margin:.35rem 0}
 
 /* ---------- POS ---------- */
 .pos-grid{display:grid;grid-template-columns:1.35fr 1fr;gap:1rem;align-items:start}
@@ -389,19 +411,35 @@ tr.low-stock:hover td{background:rgba(251,191,36,.13)}
 #ledStats { margin: 0 0 1rem; }
 .led-toolbar { margin-bottom: 1rem; }
 .led-toolbar input { flex: 1 1 260px; }
-.led-cust-list { display: flex; flex-direction: column; gap: .55rem; margin-bottom: 1rem; }
+.led-cust-list { display: flex; flex-direction: column; gap: 0; margin-bottom: 1rem; }
+.led-filters { margin-bottom: .8rem; }
 .led-cust-row { display: flex; align-items: center; gap: .7rem; background: var(--panel); border: 1px solid var(--border); border-radius: 16px; padding: .55rem .8rem; cursor: pointer; box-shadow: var(--shadow-sm); }
 .led-cust-row:hover { background: var(--raised); }
 .led-cust-row:active { transform: scale(.99); }
 .led-cust-row .grow { min-width: 0; }
 .led-bal-owe { color: var(--danger); font-weight: 800; white-space: nowrap; }
 .led-bal-clear { color: var(--lime); font-weight: 700; white-space: nowrap; }
-/* Customer boxes (profile → reg no → baqaya → time → follow-up) */
-.kbox { display: flex; align-items: center; gap: .85rem; flex-wrap: wrap; background: var(--panel);
-  border: 1px solid var(--border); border-radius: 20px; padding: .7rem .95rem; cursor: pointer;
-  box-shadow: var(--shadow-sm); transition: background .15s ease, border-color .15s ease; }
-.kbox:hover { background: var(--raised); border-color: var(--border2); }
-.kbox:active { transform: scale(.995); }
+/* Khata list — table-style: ek header strip (.khead) + rows (.krow),
+   dono ka grid template ek hi hai taake columns seedh mein rahen.
+   Row: profile → reg no → baqaya → time → follow-up → actions. */
+.khead, .krow { display: grid; grid-template-columns: minmax(200px,1.6fr) minmax(90px,.7fr) minmax(130px,.95fr) minmax(170px,1.1fr) auto;
+  gap: .85rem; align-items: center; }
+.khead { background: var(--well); border: 1px solid var(--border); border-radius: 16px 16px 0 0;
+  padding: .5rem .95rem; color: var(--muted); font-family: var(--font-head); font-size: .72rem;
+  font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
+.krow { background: var(--panel); border: 1px solid var(--border); border-top: none;
+  padding: .6rem .95rem; cursor: pointer; transition: background .15s ease; }
+.krow:last-child { border-radius: 0 0 16px 16px; }
+.krow:hover { background: var(--raised); }
+.krow:active { transform: scale(.995); }
+.kcell-cust { display: flex; align-items: center; gap: .7rem; min-width: 0; }
+.kcell-time { display: inline-flex; }
+@media(max-width: 820px) {
+  .khead { display: none; }
+  .krow { grid-template-columns: minmax(140px,1fr) auto auto; border-top: 1px solid var(--border);
+    border-radius: 16px; margin-bottom: .55rem; }
+  .krow .kcell-time, .krow .kbox-fu { display: none; }
+}
 .kbox-avatar { flex: none; display: inline-flex; }
 .kbox-reg { display: flex; flex-direction: column; gap: .05rem; min-width: 160px; }
 .kbox-reg b { font-family: var(--font-head); font-weight: 800; color: #fff; font-size: 1rem; }
