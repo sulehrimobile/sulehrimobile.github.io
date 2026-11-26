@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Sulehri Mobile — Admin, POS &amp; Technician Panel</title>
+<meta name="description" content="Staff panel for Sulehri Mobile: POS billing, inventory, repairs, ledger, expenses and P&L. Staff only.">
+<meta name="theme-color" content="#0B2A5B">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="admin.css">
+</head>
+<body>
+
+<!-- ======================= STAFF LOGIN ======================= -->
+<div id="loginView" class="login-wrap">
+  <form id="loginForm" class="login-card">
+    <div class="logo-row">
+      <span class="logo-mark">S</span>
+      <span class="logo-text">Sulehri <strong>Mobile</strong></span>
+    </div>
+    <h1>Staff Panel</h1>
+    <p class="muted">Owner, Manager, Accounts, Technician &amp; Staff — sign in with your staff account.</p>
+    <div id="demoBadgeLogin" class="demo-badge" hidden>DEMO MODE — sample data, nothing is saved to Google Sheets</div>
+    <label>Staff Email
+      <input id="loginEmail" type="email" autocomplete="username" required placeholder="you@sulehri.pk">
+    </label>
+    <label>Password
+      <input id="loginPassword" type="password" autocomplete="current-password" required placeholder="••••••••">
+    </label>
+    <p id="loginError" class="form-error" hidden></p>
+    <button class="btn btn-primary btn-block" type="submit">🔐 Sign In</button>
+    <p id="demoLoginHint" class="small muted" hidden>
+      Demo logins (password <b>demo123</b> for all):<br>
+      👑 <b>owner@sulehri.pk</b> — Owner (sees everything)<br>
+      🔧 <b>tech@sulehri.pk</b> — Technician (sees Repairs only)<br>
+      🧑‍💼 <b>manager@sulehri.pk</b> — Manager &nbsp;•&nbsp; 📒 <b>accounts@sulehri.pk</b> — Account Manager
+    </p>
+  </form>
+</div>
+
+<!-- ======================= PANEL SHELL ======================= -->
+<div id="panelView" class="shell" hidden>
+  <aside id="sidebar" class="sidebar">
+    <div class="logo-row side-logo">
+      <span class="logo-mark">S</span>
+      <span class="logo-text">Sulehri <strong>Mobile</strong></span>
+    </div>
+    <div id="demoBadgeSide" class="demo-badge" hidden>DEMO MODE</div>
+    <nav id="navList" class="nav-list" aria-label="Panel modules"></nav>
+    <div class="side-user">
+      <div class="user-chip">
+        <span class="user-avatar" id="userAvatar">?</span>
+        <span class="user-meta">
+          <span id="userChipName">—</span>
+          <span id="userChipRole" class="role-pill">—</span>
+        </span>
+      </div>
+      <button id="logoutBtn" class="btn btn-ghost btn-block" type="button">🚪 Logout</button>
+    </div>
+  </aside>
+  <div id="sidebarBackdrop" class="sidebar-backdrop" hidden></div>
+
+  <div class="main-col">
+    <header class="topbar">
+      <button id="menuBtn" class="icon-btn" type="button" aria-label="Open menu">☰</button>
+      <h2 id="topbarTitle">Dashboard</h2>
+      <span class="grow"></span>
+      <span id="writeStatus" class="write-status saved">Saved ✓</span>
+    </header>
+
+    <main id="mainContent" class="main-content">
+
+      <!-- ============ DASHBOARD ============ -->
+      <section id="mod-dashboard" class="module">
+        <div class="module-head">
+          <p class="muted">Today &amp; this month at a glance. Money numbers come from the backend P&amp;L — Cost and profit are staff-only and never shown to customers.</p>
+          <button id="dashRefresh" class="btn btn-ghost" type="button">↻ Refresh</button>
+        </div>
+        <div id="dashCards" class="cards-grid"></div>
+        <div id="dashCharts" class="charts-grid"></div>
+        <h3>⚠️ Low Stock — order soon</h3>
+        <div id="dashLowStock" class="table-wrap"></div>
+      </section>
+
+      <!-- ============ POS BILLING ============ -->
+      <section id="mod-pos" class="module" hidden>
+        <p class="muted">Counter billing. Keep the scan box selected: a USB barcode / QR scanner types the code and presses Enter — the exact Product ID / IMEI is added instantly. Prices follow the selected customer's tier.</p>
+        <div class="pos-grid">
+          <div class="card">
+            <label>📷 Scan or search product (Product ID, IMEI, brand, model)
+              <input id="posScan" type="text" autocomplete="off" placeholder="Scan barcode / type to search, then Enter">
+            </label>
+            <div class="btn-row">
+              <button id="posCameraBtn" class="btn btn-ghost" type="button">📷 Camera Scan</button>
+              <span id="posCameraMsg" class="small muted"></span>
+            </div>
+            <div id="posCameraWrap" hidden>
+              <video id="posVideo" playsinline muted></video>
+              <button id="posCameraStop" class="btn btn-ghost btn-sm" type="button">Stop Camera</button>
+            </div>
+            <div id="posSearchResults" class="search-results"></div>
+            <h3>Bill</h3>
+            <div id="posLines" class="pos-lines"></div>
+            <div class="pos-total-row">Total <strong id="posTotal">PKR 0</strong></div>
+          </div>
+          <div class="card">
+            <label>Customer
+              <select id="posCustomerSel"></select>
+            </label>
+            <p id="posCustomerInfo" class="small muted"></p>
+            <div id="posGuestFields">
+              <div class="two-col">
+                <label>Guest Name (optional)
+                  <input id="posGuestName" type="text" placeholder="e.g. Ahmed Raza">
+                </label>
+                <label>Guest Phone (optional)
+                  <input id="posGuestPhone" type="tel" placeholder="03xx-xxxxxxx">
+                </label>
+              </div>
+              <p class="small muted">📇 Phone likhne se ye shakhs <b>Customers</b> mein auto-save ho jayega.</p>
+            </div>
+            <label>Payment Method
+              <select id="posPayment"></select>
+            </label>
+            <label id="posDueDateWrap" hidden>Payment Due Date (for Credit)
+              <input id="posDueDate" type="date">
+            </label>
+            <label>Notes
+              <input id="posNotes" type="text" placeholder="Optional note on the bill">
+            </label>
+            <p id="posError" class="form-error" hidden></p>
+            <button id="posCheckoutBtn" class="btn btn-primary btn-block" type="button">🧾 Complete Sale</button>
+            <div id="posSuccess" class="success-box" hidden></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ INVENTORY ============ -->
+      <section id="mod-inventory" class="module" hidden>
+        <div class="module-head">
+          <div class="filters-row">
+            <input id="invSearch" type="search" placeholder="Search ID, brand, model, IMEI…" aria-label="Search products">
+            <select id="invCategory" aria-label="Filter by category"></select>
+            <label class="check-inline"><input id="invLowOnly" type="checkbox"> Low stock only</label>
+          </div>
+          <button id="invAddBtn" class="btn btn-primary" type="button">➕ Add Product</button>
+        </div>
+        <div id="invTableWrap" class="table-wrap"></div>
+      </section>
+
+      <!-- ============ PURCHASES ============ -->
+      <section id="mod-purchases" class="module" hidden>
+        <div class="pos-grid">
+          <div class="card">
+            <h3>📥 New Purchase (Stock-In)</h3>
+            <label>Supplier Name <input id="purSupplierName" type="text" placeholder="e.g. Karachi Mobile Wholesale"></label>
+            <label>Supplier Phone <input id="purSupplierPhone" type="tel" placeholder="03xx-xxxxxxx"></label>
+            <h4>Items</h4>
+            <div id="purItems"></div>
+            <button id="purAddItemBtn" class="btn btn-ghost btn-sm" type="button">➕ Add Item Row</button>
+            <div class="pos-total-row">Total Bill <strong id="purTotal">PKR 0</strong></div>
+            <label>Amount Paid Now <input id="purAmountPaid" type="number" min="0" step="any" value="0"></label>
+            <label>Payment Mode <select id="purPaymentMode"></select></label>
+            <label>Notes <input id="purNotes" type="text" placeholder="Optional"></label>
+            <p id="purError" class="form-error" hidden></p>
+            <button id="purSubmit" class="btn btn-primary btn-block" type="button">Save Purchase</button>
+            <p id="purSuccess" class="success-text" hidden></p>
+          </div>
+          <div class="card">
+            <h3>💸 Pay a Supplier</h3>
+            <label>Supplier Name <input id="supPayName" type="text" placeholder="Must match the purchase name"></label>
+            <label>Supplier Phone <input id="supPayPhone" type="tel" placeholder="Used as the ledger key when given"></label>
+            <label>Amount <input id="supPayAmount" type="number" min="0" step="any"></label>
+            <label>Payment Mode <select id="supPayMode"></select></label>
+            <button id="supPayBtn" class="btn btn-primary btn-block" type="button">Record Supplier Payment</button>
+            <p id="supPayMsg" class="success-text" hidden></p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ ORDERS ============ -->
+      <section id="mod-orders" class="module" hidden>
+        <div class="module-head">
+          <div class="filters-row">
+            <label class="inline-label">Status
+              <select id="ordStatusFilter"></select>
+            </label>
+          </div>
+          <button id="ordRefresh" class="btn btn-ghost" type="button">↻ Refresh</button>
+        </div>
+        <div id="ordTableWrap" class="table-wrap"></div>
+      </section>
+
+      <!-- ============ RETURNS / RMA ============ -->
+      <section id="mod-returns" class="module" hidden>
+        <div class="pos-grid">
+          <div class="card">
+            <h3>↩️ Process a Return</h3>
+            <label>Original Order ID <input id="retOrderId" type="text" placeholder="ORD-1001"></label>
+            <label>Customer <select id="retCustomerSel"></select></label>
+            <label>Product <select id="retProductSel"></select></label>
+            <label>IMEI / Serial <input id="retImei" type="text" placeholder="Optional — defaults to the product IMEI"></label>
+            <label>Reason <input id="retReason" type="text" placeholder="Why was it returned?"></label>
+            <div class="two-col">
+              <label>Action Taken <select id="retAction"></select></label>
+              <label>Stock Condition <select id="retCondition"></select></label>
+            </div>
+            <div class="two-col">
+              <label>Quantity <input id="retQty" type="number" min="1" value="1"></label>
+              <label>Refund Amount (PKR) <input id="retRefund" type="number" min="0" step="any" value="0"></label>
+            </div>
+            <button id="retSubmit" class="btn btn-primary btn-block" type="button">Process Return</button>
+            <p id="retMsg" class="success-text" hidden></p>
+          </div>
+          <div class="card">
+            <h3>Returns History</h3>
+            <div id="retTableWrap" class="table-wrap"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ REPAIRS ============ -->
+      <section id="mod-repairs" class="module" hidden>
+        <div class="module-head">
+          <div class="filters-row">
+            <input id="repSearch" type="search" placeholder="Search Job ID, name, phone, device…" aria-label="Search repairs">
+            <select id="repStageFilter" aria-label="Filter by stage"></select>
+          </div>
+          <button id="repNewBtn" class="btn btn-primary" type="button">➕ New Repair Job</button>
+        </div>
+        <div id="repCreateWrap" class="card" hidden>
+          <h3>🔧 New Repair Job</h3>
+          <div class="two-col">
+            <label>Customer Name <input id="rc_Name" type="text"></label>
+            <label>Customer Phone <input id="rc_Phone" type="tel"></label>
+          </div>
+          <div class="two-col">
+            <label>Customer Email <input id="rc_Email" type="email" placeholder="For status emails + tracking"></label>
+            <label>Device (Brand + Model) <input id="rc_Device" type="text"></label>
+          </div>
+          <div class="two-col">
+            <label>IMEI / Serial <input id="rc_Imei" type="text"></label>
+            <label>Repair Type <select id="rc_Type"></select></label>
+          </div>
+          <label>Reported Issue <input id="rc_Issue" type="text"></label>
+          <div class="two-col">
+            <label>Service Charges (PKR) <input id="rc_ServiceCharges" type="number" min="0" step="any" value="0"></label>
+            <label>Advance Paid (PKR) <input id="rc_Advance" type="number" min="0" step="any" value="0"></label>
+          </div>
+          <div class="two-col">
+            <label>Assigned Technician <input id="rc_Technician" type="text" placeholder="Staff name"></label>
+            <label>Internal Notes <input id="rc_Notes" type="text" placeholder="Staff only — never shown to the customer"></label>
+          </div>
+          <button id="rcSubmit" class="btn btn-primary" type="button">Create Job &amp; Email Customer</button>
+          <p id="rcMsg" class="success-text" hidden></p>
+        </div>
+        <div id="repTableWrap" class="table-wrap"></div>
+      </section>
+
+      <!-- ============ CUSTOMERS ============ -->
+      <section id="mod-customers" class="module" hidden>
+        <div class="module-head">
+          <input id="cusSearch" type="search" placeholder="Search name, phone, email…" aria-label="Search customers">
+          <button id="cusAddBtn" class="btn btn-primary" type="button">➕ Add Customer</button>
+        </div>
+        <div id="cusTableWrap" class="table-wrap"></div>
+      </section>
+
+      <!-- ============ LEDGER ============ -->
+      <section id="mod-ledger" class="module" hidden>
+        <div class="pos-grid">
+          <div class="card">
+            <h3>📒 Khata — Party Ledger</h3>
+            <label>Party Type <select id="ledPartyType"></select></label>
+            <label>Party <select id="ledPartySel"></select></label>
+            <button id="ledLoadBtn" class="btn btn-ghost btn-block" type="button">Load Ledger</button>
+            <p class="pos-total-row">Current Balance Owed <strong id="ledBalance">—</strong></p>
+            <button id="ledWaBtn" class="btn btn-whatsapp btn-block" type="button" hidden>📱 WhatsApp Payment Reminder</button>
+          </div>
+          <div class="card">
+            <h3>➕ Add Entry / Record Payment</h3>
+            <div class="two-col">
+              <label>Type <select id="ledType"></select></label>
+              <label>Payment Mode <select id="ledMode"></select></label>
+            </div>
+            <div class="two-col">
+              <label>Amount (PKR) <input id="ledAmount" type="number" min="0" step="any"></label>
+              <label>Due Date <input id="ledDue" type="date"></label>
+            </div>
+            <label>Reference Note <input id="ledNote" type="text" placeholder="e.g. Payment received — thank you"></label>
+            <button id="ledAddBtn" class="btn btn-primary btn-block" type="button">Save Entry</button>
+            <p id="ledMsg" class="success-text" hidden></p>
+          </div>
+        </div>
+        <div id="ledTableWrap" class="table-wrap"></div>
+      </section>
+
+      <!-- ============ EXPENSES ============ -->
+      <section id="mod-expenses" class="module" hidden>
+        <div class="pos-grid">
+          <div class="card">
+            <h3>🧾 Add Expense</h3>
+            <div class="two-col">
+              <label>Category <select id="expCategory"></select></label>
+              <label>Date <input id="expDate" type="date"></label>
+            </div>
+            <label>Description <input id="expDesc" type="text" placeholder="e.g. Shop electricity bill"></label>
+            <div class="two-col">
+              <label>Amount (PKR) <input id="expAmount" type="number" min="0" step="any"></label>
+              <label>Payment Mode <select id="expMode"></select></label>
+            </div>
+            <button id="expAddBtn" class="btn btn-primary btn-block" type="button">Save Expense</button>
+            <p id="expMsg" class="success-text" hidden></p>
+          </div>
+          <div class="card">
+            <h3>This Month</h3>
+            <p class="pos-total-row">Month Total <strong id="expMonthTotal">PKR 0</strong></p>
+            <div id="expTableWrap" class="table-wrap"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ P&L ============ -->
+      <section id="mod-pnl" class="module" hidden>
+        <div class="module-head">
+          <p class="muted">Full Profit &amp; Loss detail. Net Profit = Order Profit + Repair Profit − Expenses. Credit sales are not counted as cash until paid.</p>
+          <button id="pnlRefresh" class="btn btn-ghost" type="button">↻ Refresh</button>
+        </div>
+        <div id="pnlBody"></div>
+      </section>
+
+      <!-- ============ BANNERS ============ -->
+      <section id="mod-banners" class="module" hidden>
+        <div class="module-head">
+          <p class="muted">Homepage posters. Note: the public list only returns <b>active</b> banners — a banner you switch off disappears from this list too (it still exists in the Banners sheet).</p>
+          <button id="banAddBtn" class="btn btn-primary" type="button">➕ Add Banner</button>
+        </div>
+        <div id="banTableWrap" class="table-wrap"></div>
+      </section>
+
+      <!-- ============ WARRANTY CHECKLIST ============ -->
+      <section id="mod-warranty" class="module" hidden>
+        <div class="module-head">
+          <p class="muted">Warranty products still <b>Pending</b> whose expiry is within 7 days (or passed). Check the item, then mark it Checked — it will not appear again.</p>
+          <button id="warRefresh" class="btn btn-ghost" type="button">↻ Refresh</button>
+        </div>
+        <div id="warTableWrap" class="table-wrap"></div>
+      </section>
+
+      <!-- ============ SETTINGS & LAYOUT MANAGER ============ -->
+      <section id="mod-settings" class="module" hidden>
+        <p class="muted">No-code manager: add, rename, delete or reorder the dropdown values and homepage sections used by the whole system — no code editing needed. Changes save straight to the Settings sheet.</p>
+        <p class="note-box">📌 <b>Table columns:</b> you can safely move, rename-free reorder, or resize columns inside Google Sheets — the backend finds every column <b>by its header name</b>, never by column letter, so reordering columns cannot break the system. (Please do not rename a header itself.)</p>
+        <div class="settings-grid">
+          <div id="setGroupList" class="group-list"></div>
+          <div class="card">
+            <h3 id="setGroupTitle">Choose a list</h3>
+            <div id="setValuesWrap"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ USERS & ROLES ============ -->
+      <section id="mod-users" class="module" hidden>
+        <div class="module-head">
+          <p class="muted">Staff accounts (Owner only). Passwords are stored only as salted hashes and are never shown. Deleting a user is a soft delete — the account is deactivated, and the last active Owner can never be deactivated.</p>
+          <button id="usrAddBtn" class="btn btn-primary" type="button">➕ Add Staff</button>
+        </div>
+        <div id="usrTableWrap" class="table-wrap"></div>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<!-- ======================= REPAIR DETAIL DRAWER ======================= -->
+<div id="repairDrawer" class="drawer" hidden>
+  <div class="drawer-head">
+    <h3 id="rdTitle">Repair Job</h3>
+    <button id="rdClose" class="icon-btn" type="button" aria-label="Close">✕</button>
+  </div>
+  <div id="rdBody" class="drawer-body"></div>
+</div>
+<div id="drawerBackdrop" class="sidebar-backdrop" hidden></div>
+
+<!-- ======================= PRODUCT MODAL ======================= -->
+<div id="productModal" class="modal" hidden>
+  <div class="modal-card modal-wide">
+    <div class="modal-head"><h3 id="productModalTitle">Add Product</h3><button class="icon-btn" type="button" data-close="productModal">✕</button></div>
+    <form id="productForm">
+      <input id="pf_Product_ID" type="hidden">
+      <div class="two-col">
+        <label>Main Category <select id="pf_Main_Category"></select></label>
+        <label>Sub Category <select id="pf_Sub_Category"></select></label>
+      </div>
+      <div class="two-col">
+        <label>Brand <select id="pf_Brand"></select></label>
+        <label>Model / Name <input id="pf_Model" type="text" required></label>
+      </div>
+      <div class="two-col">
+        <label>RAM <select id="pf_RAM"></select></label>
+        <label>Storage <select id="pf_Storage"></select></label>
+      </div>
+      <div class="two-col">
+        <label>PTA Status <select id="pf_PTA_Status"></select></label>
+        <label>Network Status <select id="pf_Network_Status"></select></label>
+      </div>
+      <label>IMEI / Serial <input id="pf_IMEI_Serial" type="text"></label>
+      <div class="two-col">
+        <label>Cost Price (PKR) <input id="pf_Cost_Price" type="number" min="0" step="any"></label>
+        <label>Min Stock Alert <input id="pf_Min_Stock_Alert" type="number" min="0" value="2"></label>
+      </div>
+      <div class="two-col">
+        <label>Stock Qty <input id="pf_Stock_Qty" type="number" min="0" value="0"></label>
+        <label>Damaged Qty <input id="pf_Damaged_Qty" type="number" min="0" value="0"></label>
+      </div>
+      <div class="two-col">
+        <label>Price — Guest <input id="pf_Price_Guest" type="number" min="0" step="any"></label>
+        <label>Price — Retail <input id="pf_Price_Retail" type="number" min="0" step="any"></label>
+      </div>
+      <div class="two-col">
+        <label>Price — Wholesale <input id="pf_Price_Wholesale" type="number" min="0" step="any"></label>
+        <label>Price — Business <input id="pf_Price_Business" type="number" min="0" step="any"></label>
+      </div>
+      <div class="two-col">
+        <label>Product Badge <select id="pf_Product_Badge"></select></label>
+        <label>Added Date <input id="pf_Added_Date" type="date"></label>
+      </div>
+      <label>Image 1 URL <input id="pf_Image_1" type="url" placeholder="https://…"></label>
+      <label>Image 2 URL <input id="pf_Image_2" type="url" placeholder="https://…"></label>
+      <div class="two-col">
+        <label class="check-inline"><input id="pf_Show_On_Website" type="checkbox" checked> Show on Website</label>
+        <label class="check-inline"><input id="pf_Has_Warranty" type="checkbox"> Has Warranty</label>
+      </div>
+      <div class="two-col">
+        <label>Warranty Days <input id="pf_Warranty_Days" type="number" min="0" value="30"></label>
+        <label>Warranty Check Status <select id="pf_Check_Status"></select></label>
+      </div>
+      <p id="productError" class="form-error" hidden></p>
+      <button class="btn btn-primary btn-block" type="submit">💾 Save Product</button>
+    </form>
+  </div>
+</div>
+
+<!-- ======================= CUSTOMER MODAL ======================= -->
+<div id="customerModal" class="modal" hidden>
+  <div class="modal-card">
+    <div class="modal-head"><h3 id="customerModalTitle">Add Customer</h3><button class="icon-btn" type="button" data-close="customerModal">✕</button></div>
+    <form id="customerForm">
+      <input id="cf_Customer_ID" type="hidden">
+      <label>Name <input id="cf_Name" type="text" required></label>
+      <div class="two-col">
+        <label>Phone <input id="cf_Phone" type="tel" required></label>
+        <label>Email (optional) <input id="cf_Email" type="email" placeholder="Na ho to khaali chhor dein"></label>
+      </div>
+      <label>Set / Reset Password <input id="cf_Password" type="password" placeholder="Leave blank to keep the old password" autocomplete="new-password"></label>
+      <div class="two-col">
+        <label>Reference By <input id="cf_Reference_By" type="text"></label>
+        <label>Photo Drive URL <input id="cf_Photo_Drive_URL" type="url" placeholder="https://…"></label>
+      </div>
+      <div class="photo-row">
+        <img id="cf_PhotoPreview" class="cust-avatar-lg" alt="" hidden>
+        <label class="photo-pick">📷 Customer ki photo lagayein
+          <input id="cf_PhotoFile" type="file" accept="image/*">
+        </label>
+        <span class="small muted">Photo usi waqt profile mein lag jayegi aur Customers list mein nazar aayegi.</span>
+      </div>
+      <div class="two-col">
+        <label>Price Tier <select id="cf_Price_Tier"></select></label>
+        <label>Fallback Tier <select id="cf_Fallback_Tier"></select></label>
+      </div>
+      <div class="two-col">
+        <label>Monthly Target (PKR) <input id="cf_Monthly_Target" type="number" min="0" step="any" value="0"></label>
+        <label>Credit Limit (PKR) <input id="cf_Credit_Limit" type="number" min="0" step="any" value="0"></label>
+      </div>
+      <div class="two-col">
+        <label>Payment Due Date <input id="cf_Payment_Due_Date" type="date"></label>
+        <label>Status <select id="cf_Status"></select></label>
+      </div>
+      <p id="customerError" class="form-error" hidden></p>
+      <button class="btn btn-primary btn-block" type="submit">💾 Save Customer</button>
+    </form>
+  </div>
+</div>
+
+<!-- ======================= BANNER MODAL ======================= -->
+<div id="bannerModal" class="modal" hidden>
+  <div class="modal-card">
+    <div class="modal-head"><h3 id="bannerModalTitle">Add Banner</h3><button class="icon-btn" type="button" data-close="bannerModal">✕</button></div>
+    <form id="bannerForm">
+      <input id="bf_Banner_ID" type="hidden">
+      <label>Section Title <input id="bf_Section_Title" type="text" required placeholder="e.g. Mobile Phones"></label>
+      <label>Target Category <select id="bf_Target_Category"></select></label>
+      <label>Poster Image URL <input id="bf_Poster_Image_URL" type="url" placeholder="https://…"></label>
+      <label>Badge Text <input id="bf_Badge_Text" type="text" placeholder="e.g. UP TO 50% OFF"></label>
+      <div class="two-col">
+        <label>Display Order <input id="bf_Display_Order" type="number" min="0" value="1"></label>
+        <label class="check-inline"><input id="bf_Active_Status" type="checkbox" checked> Active</label>
+      </div>
+      <p id="bannerError" class="form-error" hidden></p>
+      <button class="btn btn-primary btn-block" type="submit">💾 Save Banner</button>
+    </form>
+  </div>
+</div>
+
+<!-- ======================= USER MODAL ======================= -->
+<div id="userModal" class="modal" hidden>
+  <div class="modal-card">
+    <div class="modal-head"><h3 id="userModalTitle">Add Staff</h3><button class="icon-btn" type="button" data-close="userModal">✕</button></div>
+    <form id="userForm">
+      <input id="uf_Staff_ID" type="hidden">
+      <label>Name <input id="uf_Name" type="text" required></label>
+      <label>Email <input id="uf_Email" type="email" required></label>
+      <label>Role <select id="uf_Role"></select></label>
+      <label>Password <input id="uf_Password" type="password" autocomplete="new-password" placeholder="Required for new staff (min 8 characters)"></label>
+      <label class="check-inline"><input id="uf_Active_Status" type="checkbox" checked> Active (can log in)</label>
+      <p id="userError" class="form-error" hidden></p>
+      <button class="btn btn-primary btn-block" type="submit">💾 Save Staff Account</button>
+    </form>
+  </div>
+</div>
+
+<!-- ======================= INVOICE MODAL ======================= -->
+<div id="invoiceModal" class="modal" hidden>
+  <div class="modal-card modal-wide">
+    <div class="modal-head no-print"><h3>Invoice</h3>
+      <span class="btn-row">
+        <button id="invoicePrintBtn" class="btn btn-primary btn-sm" type="button">🖨️ Print</button>
+        <button class="icon-btn" type="button" data-close="invoiceModal">✕</button>
+      </span>
+    </div>
+    <div id="invoiceSheet" class="invoice-sheet"></div>
+  </div>
+</div>
+
+<div id="toastWrap" class="toast-wrap" aria-live="polite"></div>
+
+<script src="admin.js"></script>
+</body>
+</html>
