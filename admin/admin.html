@@ -5,11 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Sulehri Mobile — Admin, POS &amp; Technician Panel</title>
 <meta name="description" content="Staff panel for Sulehri Mobile: POS billing, inventory, repairs, ledger, expenses and P&L. Staff only.">
-<meta name="theme-color" content="#0B2A5B">
+<meta name="theme-color" content="#0B0C0E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="admin.css?v=26">
+<link rel="stylesheet" href="admin.css?v=27">
 </head>
 <body>
 
@@ -78,7 +78,6 @@
           <p class="muted">Today &amp; this month at a glance. Money numbers come from the backend P&amp;L — Cost and profit are staff-only and never shown to customers.</p>
           <button id="dashRefresh" class="btn btn-ghost" type="button">↻ Refresh</button>
         </div>
-        <div id="dashCards" class="cards-grid"></div>
         <div class="period-switch" id="dashPeriodSwitch">
           <button type="button" class="per-btn active" data-period="daily">📅 Daily</button>
           <button type="button" class="per-btn" data-period="monthly">🗓️ Monthly</button>
@@ -86,6 +85,7 @@
           <span class="small muted" id="dashPeriodNote"></span>
         </div>
         <div id="dashCharts" class="charts-grid"></div>
+        <div id="dashCards" class="cards-grid"></div>
         <h3>⚠️ Low Stock — order soon</h3>
         <div id="dashLowStock" class="table-wrap"></div>
       </section>
@@ -287,37 +287,40 @@
       <!-- ============ LEDGER ============ -->
       <section id="mod-ledger" class="module" hidden>
         <div class="reg-counts" id="ledStats"></div>
-        <div id="ledReminders" class="card reminders-card"></div>
         <div class="filters-row led-toolbar">
-          <input id="ledSearch" type="text" placeholder="🔍 Customer ka naam ya number likhein…">
+          <input id="ledSearch" type="text" placeholder="🔍 Customer ka naam, number ya Registration No likhein…">
           <button type="button" class="btn btn-primary" id="ledAddKhata">➕ Add New Khata / Customer</button>
         </div>
         <div id="ledCustList" class="led-cust-list"></div>
-        <div class="card">
-          <h3>📒 Khata — Party Ledger</h3>
-          <label>Party Type <select id="ledPartyType"></select></label>
-          <label>Party <select id="ledPartySel"></select></label>
-          <button id="ledLoadBtn" class="btn btn-ghost btn-block" type="button">Load Ledger</button>
-          <p class="pos-total-row">Current Balance Owed <strong id="ledBalance">—</strong></p>
-          <button id="ledWaBtn" class="btn btn-whatsapp btn-block" type="button" hidden>📱 WhatsApp Payment Reminder</button>
-          <div id="ledPartyCard"></div>
-        </div>
-        <div id="ledTableWrap" class="table-wrap"></div>
-        <div id="ledInvoiceDetail"></div>
-        <div class="card">
-          <h3>➕ Add Entry / Record Payment</h3>
-          <div class="two-col">
-            <label>Type <select id="ledType"></select></label>
-            <label>Payment Mode <select id="ledMode"></select></label>
+        <div class="pos-grid">
+          <div>
+            <div class="card">
+              <h3>📒 Khata — Party Ledger</h3>
+              <label>Party Type <select id="ledPartyType"></select></label>
+              <label>Party <select id="ledPartySel"></select></label>
+              <button id="ledLoadBtn" class="btn btn-ghost btn-block" type="button">Load Ledger</button>
+              <p class="pos-total-row">Current Balance Owed <strong id="ledBalance">—</strong></p>
+              <button id="ledWaBtn" class="btn btn-whatsapp btn-block" type="button" hidden>📱 WhatsApp Payment Reminder</button>
+              <div id="ledPartyCard"></div>
+            </div>
+            <div id="ledTableWrap" class="table-wrap"></div>
+            <div id="ledInvoiceDetail"></div>
           </div>
-          <div class="two-col">
-            <label>Amount (PKR) <input id="ledAmount" type="number" min="0" step="any"></label>
-            <label>Due Date <input id="ledDue" type="date"></label>
+          <div class="card">
+            <h3>➕ Add Entry / Record Payment</h3>
+            <div class="two-col">
+              <label>Type <select id="ledType"></select></label>
+              <label>Payment Mode <select id="ledMode"></select></label>
+            </div>
+            <div class="two-col">
+              <label>Amount (PKR) <input id="ledAmount" type="number" min="0" step="any"></label>
+              <label>Due Date <input id="ledDue" type="date"></label>
+            </div>
+            <label>Reference Note <input id="ledNote" type="text" placeholder="e.g. Payment received — thank you"></label>
+            <div class="field"><label>Invoice No (optional)</label><input id="ledInvoiceNo" type="text" placeholder="e.g. ORD-1001 ya REP-1001"></div>
+            <button id="ledAddBtn" class="btn btn-primary btn-block" type="button">Save Entry</button>
+            <p id="ledMsg" class="success-text" hidden></p>
           </div>
-          <label>Reference Note <input id="ledNote" type="text" placeholder="e.g. Payment received — thank you"></label>
-          <div class="field"><label>Invoice No (optional)</label><input id="ledInvoiceNo" type="text" placeholder="e.g. ORD-1001 ya REP-1001"></div>
-          <button id="ledAddBtn" class="btn btn-primary btn-block" type="button">Save Entry</button>
-          <p id="ledMsg" class="success-text" hidden></p>
         </div>
       </section>
 
@@ -679,6 +682,6 @@
 
 <div id="toastWrap" class="toast-wrap" aria-live="polite"></div>
 
-<script src="admin.js?v=26"></script>
+<script src="admin.js?v=27"></script>
 </body>
 </html>

@@ -252,16 +252,18 @@ const GROUP_COLORS = {
   S: '#b91c1c', T: '#475569', U: '#7e22ce', V: '#166534', W: '#9a3412', X: '#334155',
   Y: '#854d0e', Z: '#e11d48'
 };
+/* Dark theme: option backgrounds gehre (dark) tints hain taake safed text
+   dark dropdown mein saaf parha jaye. */
 const GROUP_TINTS = {
-  A: '#dbeafe', B: '#ede9fe', C: '#fce7f3', D: '#d1fae5', E: '#fef3c7', F: '#cffafe',
-  G: '#ecfccb', H: '#f3e8ff', I: '#ccfbf1', J: '#ffedd5', K: '#e0f2fe', L: '#ffe4e6',
-  M: '#dcfce7', N: '#fef9c3', O: '#dbeafe', P: '#ffedd5', Q: '#ede9fe', R: '#cffafe',
-  S: '#fee2e2', T: '#e2e8f0', U: '#f3e8ff', V: '#dcfce7', W: '#ffedd5', X: '#e2e8f0',
-  Y: '#fef9c3', Z: '#ffe4e6'
+  A: '#1d3557', B: '#372a5e', C: '#571f42', D: '#17452e', E: '#57431a', F: '#174a57',
+  G: '#39511a', H: '#47245e', I: '#174f4a', J: '#573a1a', K: '#1a3f57', L: '#571f2b',
+  M: '#1e4d2a', N: '#57511a', O: '#1d3557', P: '#572f1a', Q: '#33245e', R: '#174a57',
+  S: '#571f1f', T: '#333a45', U: '#3f1e57', V: '#1e4d33', W: '#572a1a', X: '#2e3440',
+  Y: '#574a1a', Z: '#571f33'
 };
 function codeColor_(code) {
   const letter = String(code || '').charAt(0).toUpperCase();
-  return GROUP_COLORS[letter] || '#0B2A5B';
+  return GROUP_COLORS[letter] || '#B9F638';
 }
 function codeTint_(code) {
   const letter = String(code || '').charAt(0).toUpperCase();
@@ -1011,7 +1013,12 @@ function lineChartSVG_(labels, values, color) {
   });
   const maxI = values.indexOf(Math.max.apply(null, values));
   const peak = values[maxI] > 0 ? '<text x="' + pts[maxI][0].toFixed(1) + '" y="' + (pts[maxI][1] - 9).toFixed(1) + '" class="ch-val">' + shortMoney_(values[maxI]) + '</text>' : '';
-  return '<svg viewBox="0 0 ' + W + ' ' + H + '" class="chart-svg" role="img"><path d="' + area + '" fill="' + color + '" opacity="0.13"/><polyline points="' + line + '" fill="none" stroke="' + color + '" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>' + dots + peak + labs + '</svg>';
+  let grid = '';
+  [0.25, 0.5, 0.75, 1].forEach(f => {
+    const gy = (H - P - f * (H - P * 2)).toFixed(1);
+    grid += '<line x1="' + P + '" y1="' + gy + '" x2="' + (W - P) + '" y2="' + gy + '" stroke="#262A30" stroke-width="1"/>';
+  });
+  return '<svg viewBox="0 0 ' + W + ' ' + H + '" class="chart-svg" role="img">' + grid + '<path d="' + area + '" fill="' + color + '" opacity="0.12"/><polyline points="' + line + '" fill="none" stroke="' + color + '" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>' + dots + peak + labs + '</svg>';
 }
 function candleChartSVG_(days) {
   const W = 560, H = 190, P = 34;
@@ -1026,7 +1033,7 @@ function candleChartSVG_(days) {
   let s = '';
   days.forEach((d, i) => {
     const cx = P + stepX * i + stepX / 2;
-    const col = d.close >= d.open ? '#1db954' : '#e5484d';
+    const col = d.close >= d.open ? '#B9F638' : '#F87171';
     const top = y(Math.max(d.open, d.close)), bot = y(Math.min(d.open, d.close));
     s += '<line x1="' + cx.toFixed(1) + '" y1="' + y(d.high).toFixed(1) + '" x2="' + cx.toFixed(1) + '" y2="' + y(d.low).toFixed(1) + '" stroke="' + col + '" stroke-width="1.6"/>' +
       '<rect x="' + (cx - bw / 2).toFixed(1) + '" y="' + top.toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + Math.max(2, bot - top).toFixed(1) + '" rx="2" fill="' + col + '"><title>' + d.label + ' — Sales ' + money(d.close) + ' (sab se bara order ' + money(d.high) + ')</title></rect>';
@@ -1045,7 +1052,7 @@ function donutSVG_(parts) {
       off += frac;
     });
   } else {
-    segs = '<circle cx="90" cy="90" r="' + R + '" fill="none" stroke="#dfe6f2" stroke-width="26"/>';
+    segs = '<circle cx="90" cy="90" r="' + R + '" fill="none" stroke="#2A2E35" stroke-width="26"/>';
   }
   const legend = '<div class="ch-legend">' + parts.map(p =>
     '<div><span class="ch-dot" style="background:' + p.color + '"></span>' + esc(p.label) + ' — <b>' + money(p.value) + '</b></div>').join('') + '</div>';
@@ -1060,10 +1067,14 @@ function barChartSVG_(labels, a, b) {
   const stepX = (W - P * 2) / labels.length;
   const bw = Math.min(20, stepX * 0.28);
   let s = '';
+  [0.25, 0.5, 0.75, 1].forEach(f => {
+    const gy = (H - P - f * (H - P * 2)).toFixed(1);
+    s += '<line x1="' + P + '" y1="' + gy + '" x2="' + (W - P) + '" y2="' + gy + '" stroke="#262A30" stroke-width="1"/>';
+  });
   labels.forEach((lb, i) => {
     const cx = P + stepX * i + stepX / 2;
-    s += '<rect x="' + (cx - bw - 2).toFixed(1) + '" y="' + y(a[i]).toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + (H - P - y(a[i])).toFixed(1) + '" rx="3" fill="#0B7A75"><title>Income ' + lb + ': ' + money(a[i]) + '</title></rect>' +
-      '<rect x="' + (cx + 2).toFixed(1) + '" y="' + y(b[i]).toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + (H - P - y(b[i])).toFixed(1) + '" rx="3" fill="#e5484d"><title>Expenses ' + lb + ': ' + money(b[i]) + '</title></rect>' +
+    s += '<rect x="' + (cx - bw - 2).toFixed(1) + '" y="' + y(a[i]).toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + (H - P - y(a[i])).toFixed(1) + '" rx="4" fill="#B9F638"><title>Income ' + lb + ': ' + money(a[i]) + '</title></rect>' +
+      '<rect x="' + (cx + 2).toFixed(1) + '" y="' + y(b[i]).toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + (H - P - y(b[i])).toFixed(1) + '" rx="4" fill="#525866"><title>Expenses ' + lb + ': ' + money(b[i]) + '</title></rect>' +
       '<text x="' + cx.toFixed(1) + '" y="' + (H - 8) + '" class="ch-axis">' + lb + '</text>' +
       (a[i] > 0 ? '<text x="' + (cx - bw / 2 - 2).toFixed(1) + '" y="' + (y(a[i]) - 5).toFixed(1) + '" class="ch-val-sm">' + shortMoney_(a[i]) + '</text>' : '');
   });
@@ -1155,18 +1166,18 @@ function renderDashCharts(period) {
     return { label: b.label, open: open, close: close, high: Math.max(open, close, largest[i]), low: Math.min(open, close) };
   });
   const donut = donutSVG_([
-    { label: 'Sales', value: sales.reduce((a, v) => a + v, 0), color: '#0B7A75' },
-    { label: 'Repair Income', value: repInc.reduce((a, v) => a + v, 0), color: '#f5a623' },
-    { label: 'Expenses', value: expVals.reduce((a, v) => a + v, 0), color: '#e5484d' }
+    { label: 'Sales', value: sales.reduce((a, v) => a + v, 0), color: '#B9F638' },
+    { label: 'Repair Income', value: repInc.reduce((a, v) => a + v, 0), color: '#E5E7EB' },
+    { label: 'Expenses', value: expVals.reduce((a, v) => a + v, 0), color: '#F87171' }
   ]);
   const lineTitle = period === 'monthly' ? '📈 Sales — Mahana (Last 12 Months)' :
     period === 'yearly' ? '📈 Sales — Salana (Year Wise)' : '📈 Sales — Rozana (Last 14 Days)';
   wrap.innerHTML =
-    chartCard_(lineTitle, lineChartSVG_(labels, sales, '#0B2A5B')) +
+    chartCard_(lineTitle, lineChartSVG_(labels, sales, '#B9F638')) +
     chartCard_('🕯️ Sales Candles (wick = sab se bara order)', candleChartSVG_(candles)) +
     chartCard_('🍩 Kul Arsa — Paisa Kahan Se / Kahan Gaya', donut.svg, donut.legend) +
     chartCard_('📊 Income vs Expenses', barChartSVG_(labels, sales.map((s, i) => s + repInc[i]), expVals),
-      '<div class="ch-legend"><div><span class="ch-dot" style="background:#0B7A75"></span>Income</div><div><span class="ch-dot" style="background:#e5484d"></span>Expenses</div></div>');
+      '<div class="ch-legend"><div><span class="ch-dot" style="background:#B9F638"></span>Income</div><div><span class="ch-dot" style="background:#525866"></span>Expenses</div></div>');
   const note = $('dashPeriodNote');
   if (note && buckets.length) {
     if (period === 'daily') note.textContent = 'Report: ' + fmtDay_(buckets[0].key) + ' → ' + fmtDay_(buckets[buckets.length - 1].key);
@@ -1967,7 +1978,7 @@ function renderRegReport_() {
   const perDay = {};
   state.customers.forEach(c => { const k = dayKey_(c.Registered_Date); if (k) perDay[k] = (perDay[k] || 0) + 1; });
   h += '<h4>📈 Rozana Registrations — Pichle 14 Din</h4>' +
-    lineChartSVG_(days.map(k => k.slice(5)), days.map(k => perDay[k] || 0), '#0B2A5B');
+    lineChartSVG_(days.map(k => k.slice(5)), days.map(k => perDay[k] || 0), '#B9F638');
   box.innerHTML = h;
   const sel = $('regPeriod');
   if (sel) sel.addEventListener('change', () => { regPeriod = sel.value; renderRegReport_(); });
@@ -2060,11 +2071,10 @@ async function submitCustomerForm(ev) {
     $('customerModal').hidden = true;
     toast('Customer saved.', 'success');
     loadCustomers();
-    // Khata ke stats/reminders bhi foran refresh — follow-up / due date ki tabdeeli wahan bhi nazar aaye
+    // Khata ke stats/boxes bhi foran refresh — follow-up / due date ki tabdeeli wahan bhi nazar aaye
     try {
       invalidateLedgerCache_();
-      if (typeof renderLedgerOverview_ === 'function' && $('ledReminders')) renderLedgerOverview_();
-      if (typeof loadReminders_ === 'function' && $('ledReminders')) loadReminders_();
+      if (typeof renderLedgerOverview_ === 'function' && $('ledCustList')) renderLedgerOverview_();
     } catch (e) { /* best-effort refresh */ }
   } catch (e) { errBox.textContent = e.message; errBox.hidden = false; }
 }
@@ -2103,7 +2113,6 @@ async function loadLedgerModule() {
   fillSelectCoded($('ledMode'), 'Payment_Mode', state.lists.Payment_Mode, 'Cash', false);
   refreshLedgerPartyOptions();
   renderLedgerOverview_();
-  loadReminders_();
 }
 
 /* ---------- Khata: stats + customer overview (sirf Customer parties) ----------
@@ -2152,12 +2161,88 @@ async function renderLedgerOverview_() {
       statCard('📥 Kul Wasool Hua', money(wasool), 'profit') +
       statCard('🟢 Aaj ki Wasooli', money(wasoolToday), 'profit') +
       statCard('🔴 Overdue', overCount + ' parties — ' + money(overSum), 'warn');
-    ledCustData = state.customers.map(c => {
-      const g = byParty[String(c.Customer_ID)];
-      return { cust: c, balance: g && g.latest ? num(g.latest.Balance_After) : 0 };
-    }).sort((a, b) => b.balance - a.balance);
+    /* Saari parties (customers + suppliers) ke boxes ke liye data — har
+       party ka latest balance, effective due date (customers ke liye
+       Payment_Day wali maahana date bhi) aur time-rank. Sorting: overdue
+       sab se pehle, phir aaj-due / jald-due, phir balance zyada se kam,
+       aur zero-balance customers sab se aakhir mein. */
+    const allParties = {};
+    entries.forEach(e => {
+      const key = String(e.Party_Type || '') + '|' + String(e.Party_ID || '');
+      if (!allParties[key]) allParties[key] = { type: e.Party_Type, id: e.Party_ID, latest: null, latestKey: '', dueKey: '' };
+      const g = allParties[key];
+      const dk = dayKey_(e.Date);
+      if (!g.latest || dk >= g.latestKey) { g.latest = e; g.latestKey = dk; }
+      const due = dayKey_(e.Due_Date);
+      if (due && due > g.dueKey) g.dueKey = due;
+    });
+    const todayMs = new Date(today + 'T00:00:00').getTime();
+    function dueInfo_(type, cust, g) {
+      const balance = g && g.latest ? num(g.latest.Balance_After) : 0;
+      if (balance <= 0 || !g) return { rank: 4, label: '', due: '', monthly: false, diff: null };
+      const eff = type === 'Customer' ? ledEffectiveDue_(cust, g.dueKey) : { key: g.dueKey || '', monthly: false };
+      if (!eff.key) return { rank: 3, label: '', due: '', monthly: false, diff: null };
+      const diff = Math.round((new Date(eff.key + 'T00:00:00').getTime() - todayMs) / 86400000);
+      let rank, label;
+      if (diff < 0) { rank = 0; label = '🔴 ' + Math.abs(diff) + ' din late'; }
+      else if (diff === 0) { rank = 1; label = '🟠 Aaj last date'; }
+      else { rank = 2; label = '🟡 ' + diff + ' din baqi'; }
+      return { rank: rank, label: label, due: eff.key, monthly: eff.monthly, diff: diff };
+    }
+    const custRows = state.customers.map(c => {
+      const g = allParties['Customer|' + String(c.Customer_ID)];
+      const balance = g && g.latest ? num(g.latest.Balance_After) : 0;
+      return Object.assign(
+        { kind: 'Customer', cust: c, id: c.Customer_ID, name: c.Name || '', phone: c.Phone || '', balance: balance },
+        dueInfo_('Customer', c, g));
+    });
+    const seenCust = {};
+    state.customers.forEach(c => { seenCust[String(c.Customer_ID)] = 1; });
+    const otherRows = [];
+    Object.keys(allParties).forEach(key => {
+      const g = allParties[key];
+      if (g.type === 'Customer' && seenCust[String(g.id)]) return;
+      const cust = g.type === 'Customer' ? customerById(g.id) : null;
+      const balance = g.latest ? num(g.latest.Balance_After) : 0;
+      otherRows.push(Object.assign(
+        { kind: g.type, cust: cust, id: g.id, name: cust ? cust.Name : String(g.id), phone: cust ? (cust.Phone || '') : '', balance: balance },
+        dueInfo_(g.type, cust, g)));
+    });
+    ledCustData = custRows.concat(otherRows).sort((a, b) =>
+      (a.rank - b.rank) || (b.balance - a.balance));
     renderLedgerCustList_();
   } catch (e) { /* overview best-effort hai — module phir bhi chalta rahe */ }
+}
+/* ---------- Khata: customer boxes (profile → reg no → baqaya → time → follow-up) ----------
+   Har party ek .kbox hai: avatar, Registration No + naam, Baqaya block,
+   time chip (due status), follow-up dropdown (sirf customers, balance > 0)
+   aur 📒 / ✏️ buttons. Box par click → neeche usi party ka khata khulta hai. */
+const LED_FU_OPTS = [['', '— Follow-up —'], ['Called', '📞 Call ki'], ['WhatsApp', '💬 WhatsApp message'],
+  ['Talked', '🤝 Baat ho gayi'], ['No Response', '🚫 Response nahi mila']];
+function followupSelectHtml_(cust) {
+  const fs = cust.Followup_Status || '';
+  return '<select class="rem-followup" data-followup="' + esc(cust.Customer_ID) + '">' +
+    LED_FU_OPTS.map(o => '<option value="' + esc(o[0]) + '"' + (String(fs) === o[0] ? ' selected' : '') + '>' + esc(o[1]) + '</option>').join('') +
+    '</select>' +
+    (cust.Followup_Date ? '<span class="small muted kbox-fu-last">Last: ' + fmtDate(cust.Followup_Date) + '</span>' : '');
+}
+function bindFollowupSelects_(root) {
+  if (!root) return;
+  root.querySelectorAll('[data-followup]').forEach(sel => {
+    sel.addEventListener('click', ev => ev.stopPropagation());
+    sel.addEventListener('change', async ev => {
+      ev.stopPropagation();
+      const cid = sel.getAttribute('data-followup');
+      const val = sel.value;
+      const todayKey = dayKey_(new Date());
+      try {
+        await queueWrite('saveCustomer', { Customer_ID: cid, Followup_Status: val, Followup_Date: val ? todayKey : '' });
+        const cust = customerById(cid);
+        if (cust) { cust.Followup_Status = val; cust.Followup_Date = val ? todayKey : ''; }
+        toast('Follow-up save ho gaya ✅', 'success');
+      } catch (e) { toast(e.message, 'error'); }
+    });
+  });
 }
 function renderLedgerCustList_() {
   const box = $('ledCustList');
@@ -2167,135 +2252,61 @@ function renderLedgerCustList_() {
   const qd = q.replace(/[^0-9]/g, '');
   const rows = (ledCustData || []).filter(r => {
     if (!q) return true;
-    if ((r.cust.Name || '').toLowerCase().indexOf(q) > -1) return true;
-    if (String(r.cust.Phone || '').toLowerCase().indexOf(q) > -1) return true;
-    return qd !== '' && String(r.cust.Phone || '').replace(/[^0-9]/g, '').indexOf(qd) > -1;
+    if ((r.name || '').toLowerCase().indexOf(q) > -1) return true;
+    if (String(r.id || '').toLowerCase().indexOf(q) > -1) return true;
+    if (String(r.phone || '').toLowerCase().indexOf(q) > -1) return true;
+    return qd !== '' && String(r.phone || '').replace(/[^0-9]/g, '').indexOf(qd) > -1;
   });
   if (!rows.length) {
     box.innerHTML = '<p class="empty-msg">Koi customer nahi mila.</p>';
     return;
   }
-  box.innerHTML = rows.map(r =>
-    '<div class="led-cust-row" data-led-cust="' + esc(r.cust.Customer_ID) + '">' + custAvatar_(r.cust) +
-    '<span class="grow"><b>' + esc(r.cust.Name) + '</b><br><span class="small muted">' + esc(r.cust.Phone || '') + '</span></span>' +
-    '<span class="pill blue">' + esc(personType_(r.cust)) + '</span>' +
-    (r.balance > 0
-      ? '<span class="led-bal-owe">Baqaya: ' + money(r.balance) + '</span>'
-      : '<span class="led-bal-clear">Clear ✅</span>') +
-    '</div>').join('');
-  box.querySelectorAll('[data-led-cust]').forEach(row => row.addEventListener('click', () =>
-    openReminderParty_('Customer|' + row.getAttribute('data-led-cust'))));
+  box.innerHTML = rows.map((r, i) => {
+    const isCust = r.kind === 'Customer' && !!r.cust;
+    const avatar = isCust ? custAvatar_(r.cust) :
+      '<span class="cust-avatar cust-initial">' + (r.kind === 'Supplier' ? '🏭' : esc((r.name || '?').trim().charAt(0).toUpperCase() || '?')) + '</span>';
+    let h = '<div class="kbox" data-kbox="' + i + '">';
+    h += '<span class="kbox-avatar">' + avatar + '</span>';
+    if (isCust) {
+      h += '<span class="kbox-reg"><b>' + esc(r.cust.Customer_ID) + '</b>' +
+        '<small>' + esc(r.name) + (r.phone ? ' • ' + esc(r.phone) : '') + '</small></span>';
+    } else {
+      h += '<span class="kbox-reg"><b>' + esc(r.name) + '</b>' +
+        '<small>' + (r.kind === 'Supplier' ? 'Supplier' : esc(r.kind)) + (r.phone ? ' • ' + esc(r.phone) : '') + '</small></span>';
+    }
+    h += '<span class="kbox-bal"><small>Baqaya</small>' +
+      (r.balance > 0 ? '<b class="kbox-owe">' + money(r.balance) + '</b>' : '<b class="kbox-clear">Clear ✅</b>') + '</span>';
+    if (r.balance > 0 && r.label) {
+      const chipCls = r.rank === 0 ? 'kchip kchip-over' : (r.rank === 1 ? 'kchip kchip-today' : 'kchip kchip-soon');
+      h += '<span class="' + chipCls + '">' + esc(r.label) +
+        '<small>Due: ' + fmtDate(r.due) + (r.monthly ? ' (Maahana date)' : '') + '</small></span>';
+    }
+    if (isCust && r.balance > 0) {
+      h += '<span class="kbox-fu">' + followupSelectHtml_(r.cust) + '</span>';
+    }
+    h += '<span class="kbox-actions">' +
+      '<button type="button" class="icon-btn" data-kbox-open="' + i + '" title="Khata kholein">📒</button>' +
+      (isCust ? '<button type="button" class="icon-btn" data-kbox-edit="' + i + '" title="Poora form / Edit">✏️</button>' : '') +
+      '</span>';
+    return h + '</div>';
+  }).join('');
+  bindFollowupSelects_(box);
+  box.querySelectorAll('[data-kbox-open]').forEach(b => b.addEventListener('click', ev => {
+    ev.stopPropagation();
+    const r = rows[Number(b.getAttribute('data-kbox-open'))];
+    if (r) openReminderParty_(r.kind + '|' + r.id);
+  }));
+  box.querySelectorAll('[data-kbox-edit]').forEach(b => b.addEventListener('click', ev => {
+    ev.stopPropagation();
+    const r = rows[Number(b.getAttribute('data-kbox-edit'))];
+    if (r && r.cust) openCustomerModal(r.cust);
+  }));
+  box.querySelectorAll('[data-kbox]').forEach(el => el.addEventListener('click', () => {
+    const r = rows[Number(el.getAttribute('data-kbox'))];
+    if (r) openReminderParty_(r.kind + '|' + r.id);
+  }));
 }
 
-/* ---------- Khata: payment reminders (due date alerts) ---------- */
-async function loadReminders_() {
-  const box = $('ledReminders');
-  if (!box) return;
-  try {
-    const entries = await fetchAllLedger_();
-    if (!state.customers.length && can('getCustomers')) {
-      try { const cd = await api('getCustomers'); state.customers = cd.customers || []; } catch (e) {}
-    }
-    const byParty = {};
-    entries.forEach(e => {
-      const key = String(e.Party_Type || '') + '|' + String(e.Party_ID || '');
-      if (!byParty[key]) byParty[key] = { type: e.Party_Type, id: e.Party_ID, latest: null, latestKey: '', dueKey: '' };
-      const g = byParty[key];
-      const dk = dayKey_(e.Date);
-      if (!g.latest || dk >= g.latestKey) { g.latest = e; g.latestKey = dk; }
-      const due = dayKey_(e.Due_Date);
-      if (due && due > g.dueKey) g.dueKey = due;
-    });
-    const today = dayKey_(new Date());
-    const todayMs = new Date(today + 'T00:00:00').getTime();
-    const rows = [];
-    Object.keys(byParty).forEach(key => {
-      const g = byParty[key];
-      const balance = g.latest ? num(g.latest.Balance_After) : 0;
-      if (balance <= 0) return;
-      const cust = g.type === 'Customer' ? customerById(g.id) : null;
-      // Customer ki maahana Payment_Day wali date bhi due mein shamil hai —
-      // entry ki Due_Date aur maahana date mein se jo pehle aaye, wahi lagegi.
-      const eff = g.type === 'Customer' ? ledEffectiveDue_(cust, g.dueKey) : { key: g.dueKey || '', monthly: false };
-      if (!eff.key) return;
-      const diff = Math.round((new Date(eff.key + 'T00:00:00').getTime() - todayMs) / 86400000);
-      if (diff > 3) return;
-      let cls, label, rank;
-      if (diff < 0) { cls = 'rem-overdue'; label = Math.abs(diff) + ' din late'; rank = 0; }
-      else if (diff === 0) { cls = 'rem-today'; label = 'Aaj last date'; rank = 1; }
-      else { cls = 'rem-soon'; label = diff + ' din baqi'; rank = 2; }
-      if (eff.monthly) label += ' (Maahana date)';
-      rows.push({
-        key: key, cls: cls, rank: rank, diff: diff,
-        type: g.type, id: g.id, cust: cust,
-        name: cust ? cust.Name : String(g.id),
-        balance: balance, due: eff.key, label: label
-      });
-    });
-    rows.sort((a, b) => (a.rank - b.rank) || (a.diff - b.diff));
-    if (!rows.length) {
-      box.innerHTML = '<h3>⏰ Payment Reminders</h3><p class="empty-msg">✅ Koi payment reminder nahi — sab clear hai.</p>';
-      return;
-    }
-    // 4-column table: Registration No | Balance | Time | Follow-up
-    const FU_OPTS = [['', '— Follow-up —'], ['Called', '📞 Call ki'], ['WhatsApp', '💬 WhatsApp message'],
-      ['Talked', '🤝 Baat ho gayi'], ['No Response', '🚫 Response nahi mila']];
-    let h = '<h3>⏰ Payment Reminders</h3>' +
-      '<table class="rem-table"><thead><tr><th>Registration No</th><th>Balance</th><th>Time</th><th>Follow-up</th></tr></thead><tbody>';
-    rows.forEach((r, i) => {
-      const isCust = r.type === 'Customer' && !!r.cust;
-      h += '<tr class="' + r.cls + '" data-rem-row="' + i + '">';
-      if (isCust) {
-        h += '<td><button type="button" class="icon-btn rem-khata-btn" data-rem-khata="' + esc(r.key) + '" title="Khata kholein">📒</button> ' +
-          '<b>' + esc(r.cust.Customer_ID) + '</b><br><span class="small muted">' + esc(r.cust.Name || '') + '</span></td>';
-      } else if (r.type === 'Customer') {
-        h += '<td><b>' + esc(r.id) + '</b><br><span class="small muted">Customer</span></td>';
-      } else {
-        h += '<td><b>' + esc(r.name) + '</b><br><span class="small muted">Supplier</span></td>';
-      }
-      h += '<td><b>' + money(r.balance) + '</b></td>';
-      h += '<td><b>' + esc(r.label) + '</b><br><span class="small muted">Due: ' + fmtDate(r.due) + '</span></td>';
-      if (isCust) {
-        const fs = r.cust.Followup_Status || '';
-        h += '<td><select class="rem-followup" data-customer="' + esc(r.cust.Customer_ID) + '">' +
-          FU_OPTS.map(o => '<option value="' + esc(o[0]) + '"' + (String(fs) === o[0] ? ' selected' : '') + '>' + esc(o[1]) + '</option>').join('') +
-          '</select>' +
-          (r.cust.Followup_Date ? '<br><span class="small muted">Last: ' + fmtDate(r.cust.Followup_Date) + '</span>' : '') + '</td>';
-      } else {
-        h += '<td>—</td>';
-      }
-      h += '</tr>';
-    });
-    h += '</tbody></table>' +
-      '<p class="small muted">Kisi bhi row par click karein — customer ka poora form khul jayega, wahan se edit kar sakte hain.</p>';
-    box.innerHTML = h;
-    box.querySelectorAll('[data-rem-khata]').forEach(b => b.addEventListener('click', ev => {
-      ev.stopPropagation();
-      openReminderParty_(b.getAttribute('data-rem-khata'));
-    }));
-    box.querySelectorAll('.rem-followup').forEach(sel => {
-      sel.addEventListener('click', ev => ev.stopPropagation());
-      sel.addEventListener('change', async ev => {
-        ev.stopPropagation();
-        const cid = sel.getAttribute('data-customer');
-        const val = sel.value;
-        const todayKey = dayKey_(new Date());
-        try {
-          await queueWrite('saveCustomer', { Customer_ID: cid, Followup_Status: val, Followup_Date: val ? todayKey : '' });
-          const cust = customerById(cid);
-          if (cust) { cust.Followup_Status = val; cust.Followup_Date = val ? todayKey : ''; }
-          toast('Follow-up save ho gaya ✅', 'success');
-        } catch (e) { toast(e.message, 'error'); }
-      });
-    });
-    box.querySelectorAll('[data-rem-row]').forEach(tr => tr.addEventListener('click', () => {
-      const r = rows[Number(tr.getAttribute('data-rem-row'))];
-      if (!r) return;
-      if (r.type === 'Customer' && r.cust) openCustomerModal(r.cust);
-      else openReminderParty_(r.key);
-    }));
-  } catch (e) { /* reminders are best-effort — module phir bhi chalta rahe */ }
-}
 async function openReminderParty_(key) {
   const parts = String(key || '').split('|');
   const type = parts[0], id = parts.slice(1).join('|');
@@ -2438,7 +2449,6 @@ async function loadLedger() {
       showInvoiceDetail_(b.getAttribute('data-inv'))));
     invalidateLedgerCache_();
     renderLedgerOverview_();
-    loadReminders_();
   } catch (e) { toast(e.message, 'error'); }
 }
 async function submitLedgerEntry() {
