@@ -325,6 +325,21 @@ tr.low-stock:hover td{background:#FFEDD5}
 .rem-row.rem-overdue { border-left-color: var(--coral); background: #FFF1F2; }
 .rem-row.rem-today { border-left-color: #EA580C; background: #FFF7ED; }
 .rem-row.rem-soon { border-left-color: var(--amber); }
+.rem-table { width: 100%; border-collapse: collapse; }
+.rem-table th { background: var(--navy); color: #fff; text-align: left; padding: .5rem .6rem; font-size: .85rem; }
+.rem-table th:first-child { border-radius: 8px 0 0 0; }
+.rem-table th:last-child { border-radius: 0 8px 0 0; }
+.rem-table td { padding: .55rem .6rem; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.rem-table tbody tr { cursor: pointer; }
+.rem-table tbody tr.rem-overdue td { background: #FFF1F2; }
+.rem-table tbody tr.rem-overdue td:first-child { border-left: 5px solid var(--coral); }
+.rem-table tbody tr.rem-today td { background: #FFF7ED; }
+.rem-table tbody tr.rem-today td:first-child { border-left: 5px solid #EA580C; }
+.rem-table tbody tr.rem-soon td { background: #FFFBEB; }
+.rem-table tbody tr.rem-soon td:first-child { border-left: 5px solid var(--amber); }
+.rem-table tbody tr:hover td { filter: brightness(.97); }
+.rem-followup { max-width: 180px; padding: .35rem .45rem; font-size: .85rem; }
+.rem-khata-btn { vertical-align: middle; margin-right: .15rem; }
 .party-card { border: 1px solid var(--line); border-radius: 12px; padding: .75rem .85rem; margin-top: .85rem; background: var(--slate-bg); }
 .party-card .pos-total-row { margin: .5rem 0; }
 #ledInvoiceDetail .party-card { margin: 1rem 0 0; background: var(--white); box-shadow: var(--shadow-sm); }

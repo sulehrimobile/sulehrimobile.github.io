@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="admin.css">
+<link rel="stylesheet" href="admin.css?v=26">
 </head>
 <body>
 
@@ -605,6 +605,22 @@
         <label>Payment Due Date <input id="cf_Payment_Due_Date" type="date"></label>
         <label>Status <select id="cf_Status"></select></label>
       </div>
+      <label>Har Maah Payment ki Date <input id="cf_PaymentDay" type="number" min="1" max="31" placeholder="e.g. 10"></label>
+      <fieldset class="sub-fieldset">
+        <legend>🪪 CNIC (ID Card) Copies</legend>
+        <div class="two-col">
+          <div class="field">
+            <label>CNIC Front</label>
+            <input id="cf_CnicFrontFile" type="file" accept="image/*">
+            <img id="cf_CnicFrontPreview" class="photo-preview" hidden>
+          </div>
+          <div class="field">
+            <label>CNIC Back</label>
+            <input id="cf_CnicBackFile" type="file" accept="image/*">
+            <img id="cf_CnicBackPreview" class="photo-preview" hidden>
+          </div>
+        </div>
+      </fieldset>
       <p id="customerError" class="form-error" hidden></p>
       <button class="btn btn-primary btn-block" type="submit">💾 Save Customer</button>
     </form>
@@ -663,6 +679,6 @@
 
 <div id="toastWrap" class="toast-wrap" aria-live="polite"></div>
 
-<script src="admin.js"></script>
+<script src="admin.js?v=26"></script>
 </body>
 </html>

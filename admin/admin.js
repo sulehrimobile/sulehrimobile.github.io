@@ -1889,6 +1889,8 @@ function replaceRepair(updated) {
 let regFilter = 'all';
 let regPeriod = 'all';
 let customerGuarantorPhotoData = null;
+let customerCnicFrontData = null;
+let customerCnicBackData = null;
 function personType_(c) { return c.Person_Type || (c.Price_Tier === 'Shopkeeper' ? 'Shopkeeper' : 'Customer'); }
 function regFilterMatch_(c) {
   if (regFilter === 'all') return true;
@@ -2004,6 +2006,17 @@ function openCustomerModal(c) {
   const gf = $('cf_GPhotoFile'); if (gf) gf.value = '';
   const gp = $('cf_GPhotoPreview');
   if (gp) { const t = c ? driveThumb_(c.Guarantor_Photo_URL) : ''; gp.hidden = !t; if (t) gp.src = t; else gp.removeAttribute('src'); }
+  // CNIC copies + maahana payment date (v2.5)
+  const pdEl = $('cf_PaymentDay');
+  if (pdEl) pdEl.value = c && c.Payment_Day ? c.Payment_Day : '';
+  customerCnicFrontData = null;
+  customerCnicBackData = null;
+  const cff = $('cf_CnicFrontFile'); if (cff) cff.value = '';
+  const cbf = $('cf_CnicBackFile'); if (cbf) cbf.value = '';
+  const cfp = $('cf_CnicFrontPreview');
+  if (cfp) { const t = c ? driveThumb_(c.CNIC_Front_URL) : ''; cfp.hidden = !t; if (t) cfp.src = t; else cfp.removeAttribute('src'); }
+  const cbp = $('cf_CnicBackPreview');
+  if (cbp) { const t = c ? driveThumb_(c.CNIC_Back_URL) : ''; cbp.hidden = !t; if (t) cbp.src = t; else cbp.removeAttribute('src'); }
   $('customerError').hidden = true;
   $('customerModal').hidden = false;
 }
@@ -2031,11 +2044,28 @@ async function submitCustomerForm(ev) {
     payload.guarantorPhotoBase64 = customerGuarantorPhotoData.base64;
     payload.guarantorPhotoContentType = customerGuarantorPhotoData.type;
   }
+  // CNIC copies + maahana payment date (v2.5)
+  const pdVal = $('cf_PaymentDay') ? num($('cf_PaymentDay').value) : 0;
+  if (pdVal >= 1 && pdVal <= 31) payload.Payment_Day = pdVal;
+  if (customerCnicFrontData) {
+    payload.cnicFrontBase64 = customerCnicFrontData.base64;
+    payload.cnicFrontContentType = customerCnicFrontData.type;
+  }
+  if (customerCnicBackData) {
+    payload.cnicBackBase64 = customerCnicBackData.base64;
+    payload.cnicBackContentType = customerCnicBackData.type;
+  }
   try {
     await queueWrite('saveCustomer', payload);
     $('customerModal').hidden = true;
     toast('Customer saved.', 'success');
     loadCustomers();
+    // Khata ke stats/reminders bhi foran refresh — follow-up / due date ki tabdeeli wahan bhi nazar aaye
+    try {
+      invalidateLedgerCache_();
+      if (typeof renderLedgerOverview_ === 'function' && $('ledReminders')) renderLedgerOverview_();
+      if (typeof loadReminders_ === 'function' && $('ledReminders')) loadReminders_();
+    } catch (e) { /* best-effort refresh */ }
   } catch (e) { errBox.textContent = e.message; errBox.hidden = false; }
 }
 
@@ -2197,6 +2227,7 @@ async function loadReminders_() {
       if (eff.monthly) label += ' (Maahana date)';
       rows.push({
         key: key, cls: cls, rank: rank, diff: diff,
+        type: g.type, id: g.id, cust: cust,
         name: cust ? cust.Name : String(g.id),
         balance: balance, due: eff.key, label: label
       });
@@ -2206,12 +2237,63 @@ async function loadReminders_() {
       box.innerHTML = '<h3>⏰ Payment Reminders</h3><p class="empty-msg">✅ Koi payment reminder nahi — sab clear hai.</p>';
       return;
     }
-    box.innerHTML = '<h3>⏰ Payment Reminders</h3>' + rows.map(r =>
-      '<div class="rem-row ' + r.cls + '"><span class="grow"><b>' + esc(r.name) + '</b> — ' + money(r.balance) +
-      ' — Due: ' + fmtDate(r.due) + ' (<b>' + esc(r.label) + '</b>)</span>' +
-      '<button type="button" class="btn btn-ghost btn-sm" data-rem-party="' + esc(r.key) + '">Khata Kholein</button></div>').join('');
-    box.querySelectorAll('[data-rem-party]').forEach(b => b.addEventListener('click', () =>
-      openReminderParty_(b.getAttribute('data-rem-party'))));
+    // 4-column table: Registration No | Balance | Time | Follow-up
+    const FU_OPTS = [['', '— Follow-up —'], ['Called', '📞 Call ki'], ['WhatsApp', '💬 WhatsApp message'],
+      ['Talked', '🤝 Baat ho gayi'], ['No Response', '🚫 Response nahi mila']];
+    let h = '<h3>⏰ Payment Reminders</h3>' +
+      '<table class="rem-table"><thead><tr><th>Registration No</th><th>Balance</th><th>Time</th><th>Follow-up</th></tr></thead><tbody>';
+    rows.forEach((r, i) => {
+      const isCust = r.type === 'Customer' && !!r.cust;
+      h += '<tr class="' + r.cls + '" data-rem-row="' + i + '">';
+      if (isCust) {
+        h += '<td><button type="button" class="icon-btn rem-khata-btn" data-rem-khata="' + esc(r.key) + '" title="Khata kholein">📒</button> ' +
+          '<b>' + esc(r.cust.Customer_ID) + '</b><br><span class="small muted">' + esc(r.cust.Name || '') + '</span></td>';
+      } else if (r.type === 'Customer') {
+        h += '<td><b>' + esc(r.id) + '</b><br><span class="small muted">Customer</span></td>';
+      } else {
+        h += '<td><b>' + esc(r.name) + '</b><br><span class="small muted">Supplier</span></td>';
+      }
+      h += '<td><b>' + money(r.balance) + '</b></td>';
+      h += '<td><b>' + esc(r.label) + '</b><br><span class="small muted">Due: ' + fmtDate(r.due) + '</span></td>';
+      if (isCust) {
+        const fs = r.cust.Followup_Status || '';
+        h += '<td><select class="rem-followup" data-customer="' + esc(r.cust.Customer_ID) + '">' +
+          FU_OPTS.map(o => '<option value="' + esc(o[0]) + '"' + (String(fs) === o[0] ? ' selected' : '') + '>' + esc(o[1]) + '</option>').join('') +
+          '</select>' +
+          (r.cust.Followup_Date ? '<br><span class="small muted">Last: ' + fmtDate(r.cust.Followup_Date) + '</span>' : '') + '</td>';
+      } else {
+        h += '<td>—</td>';
+      }
+      h += '</tr>';
+    });
+    h += '</tbody></table>' +
+      '<p class="small muted">Kisi bhi row par click karein — customer ka poora form khul jayega, wahan se edit kar sakte hain.</p>';
+    box.innerHTML = h;
+    box.querySelectorAll('[data-rem-khata]').forEach(b => b.addEventListener('click', ev => {
+      ev.stopPropagation();
+      openReminderParty_(b.getAttribute('data-rem-khata'));
+    }));
+    box.querySelectorAll('.rem-followup').forEach(sel => {
+      sel.addEventListener('click', ev => ev.stopPropagation());
+      sel.addEventListener('change', async ev => {
+        ev.stopPropagation();
+        const cid = sel.getAttribute('data-customer');
+        const val = sel.value;
+        const todayKey = dayKey_(new Date());
+        try {
+          await queueWrite('saveCustomer', { Customer_ID: cid, Followup_Status: val, Followup_Date: val ? todayKey : '' });
+          const cust = customerById(cid);
+          if (cust) { cust.Followup_Status = val; cust.Followup_Date = val ? todayKey : ''; }
+          toast('Follow-up save ho gaya ✅', 'success');
+        } catch (e) { toast(e.message, 'error'); }
+      });
+    });
+    box.querySelectorAll('[data-rem-row]').forEach(tr => tr.addEventListener('click', () => {
+      const r = rows[Number(tr.getAttribute('data-rem-row'))];
+      if (!r) return;
+      if (r.type === 'Customer' && r.cust) openCustomerModal(r.cust);
+      else openReminderParty_(r.key);
+    }));
   } catch (e) { /* reminders are best-effort — module phir bhi chalta rahe */ }
 }
 async function openReminderParty_(key) {
@@ -3353,6 +3435,36 @@ function bindEvents() {
       const pv = $('cf_GPhotoPreview');
       if (pv) { pv.src = dataUrl; pv.hidden = false; }
       toast('📷 Guarantor ki photo tayyar hai — Save dabane par lag jayegi.', 'success');
+    };
+    reader.readAsDataURL(f);
+  });
+  const cnicFrontFileEl = $('cf_CnicFrontFile');
+  if (cnicFrontFileEl) cnicFrontFileEl.addEventListener('change', () => {
+    const f = cnicFrontFileEl.files && cnicFrontFileEl.files[0];
+    if (!f) return;
+    if (f.size > 3 * 1024 * 1024) { toast('Photo 3MB se chhoti rakhein.', 'error'); cnicFrontFileEl.value = ''; return; }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = String(reader.result || '');
+      customerCnicFrontData = { base64: dataUrl.split(',')[1] || '', type: f.type || 'image/jpeg' };
+      const pv = $('cf_CnicFrontPreview');
+      if (pv) { pv.src = dataUrl; pv.hidden = false; }
+      toast('🪪 CNIC front ki photo tayyar hai — Save dabane par lag jayegi.', 'success');
+    };
+    reader.readAsDataURL(f);
+  });
+  const cnicBackFileEl = $('cf_CnicBackFile');
+  if (cnicBackFileEl) cnicBackFileEl.addEventListener('change', () => {
+    const f = cnicBackFileEl.files && cnicBackFileEl.files[0];
+    if (!f) return;
+    if (f.size > 3 * 1024 * 1024) { toast('Photo 3MB se chhoti rakhein.', 'error'); cnicBackFileEl.value = ''; return; }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = String(reader.result || '');
+      customerCnicBackData = { base64: dataUrl.split(',')[1] || '', type: f.type || 'image/jpeg' };
+      const pv = $('cf_CnicBackPreview');
+      if (pv) { pv.src = dataUrl; pv.hidden = false; }
+      toast('🪪 CNIC back ki photo tayyar hai — Save dabane par lag jayegi.', 'success');
     };
     reader.readAsDataURL(f);
   });
