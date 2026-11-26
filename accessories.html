@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Accessories — Sulehri Mobile</title>
+<meta name="description" content="Sulehri Mobile — mobile phones, LCD units, parts, accessories and repair services at honest prices.">
+<meta name="theme-color" content="#0B2A5B">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<script>try { document.documentElement.dataset.theme = localStorage.getItem('sm_theme') || 'ocean'; } catch (e) { document.documentElement.dataset.theme = 'ocean'; }</script>
+</head>
+<body>
+
+<!-- ================= HEADER ================= -->
+<header class="site-header" id="siteHeader">
+  <div class="header-inner">
+    <button class="logo" id="logoBtn" type="button" aria-label="Sulehri Mobile — Home">
+      <span class="logo-mark">S</span>
+      <span class="logo-text">Sulehri <strong>Mobile</strong></span>
+    </button>
+
+    <div class="search-wrap">
+      <span class="search-icon" aria-hidden="true">🔍</span>
+      <input id="searchInput" type="search" autocomplete="off" enterkeyhint="search"
+             placeholder="Search phones, LCD units, glass protectors…" aria-label="Search products">
+      <div class="suggestions" id="searchSuggestions" hidden></div>
+    </div>
+
+    <div class="header-actions">
+      <div class="theme-wrap">
+        <button class="icon-btn" id="themeBtn" type="button" aria-label="Change theme">🎨</button>
+        <div class="theme-pop" id="themePop" hidden>
+          <strong>🎨 Apni Theme Chunein</strong>
+          <button type="button" class="theme-opt" data-theme-set="ocean"><span class="theme-dot" style="background:linear-gradient(135deg,#0B2A5B,#2563EB)"></span>Ocean Blue</button>
+          <button type="button" class="theme-opt" data-theme-set="emerald"><span class="theme-dot" style="background:linear-gradient(135deg,#064E3B,#059669)"></span>Emerald Green</button>
+          <button type="button" class="theme-opt" data-theme-set="royal"><span class="theme-dot" style="background:linear-gradient(135deg,#3B0764,#7C3AED)"></span>Royal Purple</button>
+          <button type="button" class="theme-opt" data-theme-set="sunset"><span class="theme-dot" style="background:linear-gradient(135deg,#7C2D12,#EA580C)"></span>Sunset Orange</button>
+          <button type="button" class="theme-opt" data-theme-set="rose"><span class="theme-dot" style="background:linear-gradient(135deg,#500724,#DB2777)"></span>Rose Pink</button>
+        </div>
+      </div>
+      <button class="btn btn-ghost header-track" id="trackBtnTop" type="button">🛠️ Track Repair</button>
+      <button class="icon-btn" id="cartBtn" type="button" aria-label="Open cart">
+        🛒 <span class="cart-badge" id="cartBadge" hidden>0</span>
+      </button>
+      <button class="btn btn-primary" id="loginBtn" type="button">
+        <span id="accountBtnLabel">Login</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Main tab nav + mega menu -->
+  <nav class="main-nav" id="mainNav" aria-label="Shop sections">
+    <div class="main-nav-inner" id="mainNavInner">
+      <button type="button" class="nav-tab" data-tab="home">Home</button>
+      <button type="button" class="nav-tab has-menu" data-tab="phones" aria-haspopup="true" aria-expanded="false"><img class="tab-thumb" id="thumbMobile" alt="" hidden>Mobile <span class="nav-caret">▾</span></button>
+      <button type="button" class="nav-tab has-menu" data-tab="accessories" aria-haspopup="true" aria-expanded="false"><img class="tab-thumb" id="thumbAccessories" alt="" hidden>Accessories <span class="nav-caret">▾</span></button>
+      <button type="button" class="nav-tab has-menu" data-tab="parts" aria-haspopup="true" aria-expanded="false"><img class="tab-thumb" id="thumbParts" alt="" hidden>Parts <span class="nav-caret">▾</span></button>
+      <button type="button" class="nav-tab" data-tab="repair"><img class="tab-thumb" src="images/repair-hero.jpg" alt="">Repairing</button>
+    </div>
+    <div class="mega-panel" id="megaPanel" hidden></div>
+  </nav>
+</header>
+
+<!-- Demo notice (only visible in DEMO mode) -->
+<div class="demo-banner" id="demoBanner" hidden>
+  🧪 <strong>DEMO MODE</strong> — sample data for design preview. Add your Web App URL in <code>app.js</code> to go live.
+</div>
+
+<!-- Monthly target bar (logged-in customers only) -->
+<section class="target-bar" id="targetBar" hidden>
+  <div class="target-inner">
+    <div class="target-text">
+      🎯 <strong id="targetTierName">Retail</strong> member —
+      Spent <strong id="targetSpent">PKR 0</strong> of <strong id="targetTarget">PKR 0</strong>
+      · <span id="targetRemaining"></span>
+    </div>
+    <div class="target-track"><div class="target-fill" id="targetFill"></div></div>
+    <div class="target-pct" id="targetPercent">0%</div>
+  </div>
+</section>
+
+<main id="mainContent">
+
+  <!-- ================= VIEW: HOME ================= -->
+  <section class="view" id="viewHome" hidden>
+    <div class="hero-slider" id="heroSlider" hidden>
+      <div class="hero-track" id="heroTrack"></div>
+      <button type="button" class="hero-arrow hero-prev" id="heroPrev" aria-label="Previous">‹</button>
+      <button type="button" class="hero-arrow hero-next" id="heroNext" aria-label="Next">›</button>
+      <div class="hero-dots" id="heroDots"></div>
+    </div>
+
+    <div class="section-head reveal">
+      <h2>🛍️ Shop by Category</h2>
+    </div>
+    <div class="home-cats reveal" id="homeCats"></div>
+
+    <div id="showcaseWrap"></div>
+
+    <div class="section-head">
+      <h2>🛍️ Latest Products</h2>
+      <button class="btn btn-ghost" id="btnShopAll" type="button">View all →</button>
+    </div>
+    <div class="product-grid" id="homeGrid"></div>
+  </section>
+
+  <!-- ================= VIEW: SHOP ================= -->
+  <section class="view" id="viewShop">
+    <div class="cat-hero" id="catHero" hidden>
+      <div class="cat-hero-img" id="catHeroImg"></div>
+      <div>
+        <div class="cat-hero-crumb" id="catHeroCrumb"></div>
+        <h2 id="catHeroTitle"></h2>
+        <div class="cat-hero-count" id="catHeroCount"></div>
+      </div>
+    </div>
+    <div class="shop-layout">
+
+      <!-- Filters: sidebar (desktop) / drawer (mobile) -->
+      <aside class="filters" id="filterDrawer" aria-label="Filters">
+        <div class="filters-head">
+          <h3>🎛️ Filters</h3>
+          <button class="btn btn-ghost btn-sm" id="clearFiltersBtn" type="button">Clear all</button>
+          <button class="icon-btn filters-close" id="closeFiltersBtn" type="button" aria-label="Close filters">✕</button>
+        </div>
+
+        <div class="filter-group">
+          <h4>Category</h4>
+          <div id="filterMainCats"></div>
+        </div>
+        <div class="filter-group">
+          <h4>Sub-Category <span class="muted">(with counts)</span></h4>
+          <div id="filterSubCats"></div>
+        </div>
+        <div class="filter-group">
+          <h4>Brand</h4>
+          <div id="filterBrands"></div>
+        </div>
+        <div class="filter-group" data-group="tech">
+          <h4>RAM</h4>
+          <div id="filterRams" class="chip-row"></div>
+        </div>
+        <div class="filter-group" data-group="tech">
+          <h4>Storage</h4>
+          <div id="filterStorages" class="chip-row"></div>
+        </div>
+        <div class="filter-group" data-group="tech">
+          <h4>PTA Status</h4>
+          <div id="filterPtas"></div>
+        </div>
+        <div class="filter-group" data-group="tech">
+          <h4>Network</h4>
+          <div id="filterNetworks"></div>
+        </div>
+        <div class="filter-group">
+          <h4>Price Range (PKR)</h4>
+          <div class="price-inputs">
+            <input id="priceMin" type="number" min="0" placeholder="Min" inputmode="numeric">
+            <span>—</span>
+            <input id="priceMax" type="number" min="0" placeholder="Max" inputmode="numeric">
+          </div>
+          <div id="priceQuick" class="chip-row">
+            <button type="button" class="chip" data-price="0-1000">Under 1,000</button>
+            <button type="button" class="chip" data-price="1000-5000">1,000–5,000</button>
+            <button type="button" class="chip" data-price="5000-20000">5,000–20,000</button>
+            <button type="button" class="chip" data-price="20000-60000">20,000–60,000</button>
+            <button type="button" class="chip" data-price="60000-">60,000+</button>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-block filters-apply" id="applyFiltersBtn" type="button">Show results</button>
+      </aside>
+      <div class="drawer-scrim" id="filterScrim" hidden></div>
+
+      <div class="shop-main">
+        <div class="shop-toolbar">
+          <button class="btn btn-ghost" id="openFiltersBtn" type="button">🎛️ Filters</button>
+          <span class="muted" id="resultCount"></span>
+          <label class="sort-label">Sort
+            <select id="sortSelect">
+              <option value="featured">Featured</option>
+              <option value="price-asc">Price: Low to High</option>
+              <option value="price-desc">Price: High to Low</option>
+              <option value="newest">Newest</option>
+            </select>
+          </label>
+        </div>
+        <div class="active-filter-chips" id="activeFilterChips"></div>
+        <div class="product-grid" id="shopGrid"></div>
+        <p class="empty-state" id="shopEmpty" hidden>😕 No products match these filters.<br>
+          <button class="btn btn-ghost" id="emptyClearBtn" type="button">Clear filters</button></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= VIEW: REPAIRING ================= -->
+  <section class="view" id="viewRepair" hidden>
+    <div class="repair-hero reveal">
+      <img class="repair-hero-bg" src="images/repair-hero.jpg" alt="Sulehri Mobile repair lab">
+      <div class="repair-hero-shade"></div>
+      <div class="repair-hero-content">
+        <span class="hero-kicker">🔬 SULEHRI MOBILE REPAIR LAB</span>
+        <h2>Mobile Repairing — Chip Level Experts</h2>
+        <p>Screen se lekar <strong>CPU drilling</strong> tak — woh kaam jo dusri dukanein wapas kar deti hain, hum yahan karte hain.
+          Diagnosis <strong>bilkul FREE</strong> — pehle quote, phir kaam, warranty ke saath.</p>
+        <div class="repair-hero-btns">
+          <a class="btn btn-whatsapp" id="repairWaBtn" href="#" target="_blank" rel="noopener">💬 WhatsApp par repair quote lein</a>
+          <button class="btn btn-ghost" id="repairTrackBtn" type="button">🔎 Apni repair track karein</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="featured-service reveal">
+      <div class="featured-media">
+        <img src="images/repair-cpu.jpg" alt="CPU drilling on a phone motherboard">
+        <span class="featured-ribbon">⭐ SPECIALIST SERVICE</span>
+      </div>
+      <div class="featured-body">
+        <h3>🔥 CPU Drilling &amp; Advanced Board Repair</h3>
+        <p>Ye humari sab se khaas service hai — Pakistan mein bohat kam shops ye kaam karti hain!
+          Bilkul <strong>dead phone</strong>, pani mein gira phone, ya woh phone jise sab ne <em>"na-umeed"</em> keh diya ho —
+          microscope ke neeche CPU drilling karke board ki andar ki layers tak pohanchte hain,
+          taake aap ka <strong>data bhi bache aur phone bhi chal pare</strong>. Samsung, iPhone, Xiaomi — har model.</p>
+        <div class="svc-chips">
+          <span>Dead Phone Recovery</span><span>CPU Reballing</span><span>UFS / EMMC Drilling Access</span>
+          <span>iPhone CPU Work</span><span>Data Recovery</span><span>Board Short Fix</span>
+        </div>
+        <a class="btn btn-whatsapp" href="#" target="_blank" rel="noopener" data-wa-service="CPU Drilling / dead phone repair">💬 CPU Drilling ke liye quote lein</a>
+      </div>
+    </div>
+
+    <h3 class="repair-h reveal">🔧 Our Repair Services</h3>
+    <div class="svc2-grid">
+      <article class="svc2-card reveal">
+        <img src="images/repair-hardware.jpg" alt="Mobile hardware repair">
+        <div class="svc2-body">
+          <h4>🛠️ Mobile Hardware</h4>
+          <p>Screen se motherboard tak — har hardware masla genuine quality parts aur warranty ke saath, zyada tar usi din.</p>
+          <div class="svc-chips"><span>Screen / LCD</span><span>Battery</span><span>Charging Port</span><span>Camera</span><span>Speaker / Mic</span><span>Face ID / Fingerprint</span></div>
+          <a class="btn btn-whatsapp btn-sm" href="#" target="_blank" rel="noopener" data-wa-service="Mobile Hardware repair">💬 Quote lein</a>
+        </div>
+      </article>
+      <article class="svc2-card reveal">
+        <img src="images/repair-software.jpg" alt="Mobile software flashing">
+        <div class="svc2-body">
+          <h4>💾 Mobile Software</h4>
+          <p>Phone logo par atka hai, hang hota hai ya software kharab ho gaya? Data ka khayal rakhte hue har software masla hal.</p>
+          <div class="svc-chips"><span>Flashing / Firmware</span><span>Logo Hang Fix</span><span>Software Update</span><span>Virus Removal</span><span>Data Backup</span><span>FRP (sirf malik ke liye)</span></div>
+          <a class="btn btn-whatsapp btn-sm" href="#" target="_blank" rel="noopener" data-wa-service="Mobile Software repair">💬 Quote lein</a>
+        </div>
+      </article>
+      <article class="svc2-card reveal">
+        <img src="images/repair-jtag.jpg" alt="JTAG boot repair">
+        <div class="svc2-body">
+          <h4>🔌 JTAG Boot Repair</h4>
+          <p>Bilkul dead phone jo computer se bhi connect na ho — JTAG se seedha chip se connection karke boot wapas layein.</p>
+          <div class="svc-chips"><span>Dead Boot Repair</span><span>ISP Pinout Work</span><span>No Power / No Port</span><span>Bootloader Fix</span><span>Samsung / Xiaomi Dead Fix</span></div>
+          <a class="btn btn-whatsapp btn-sm" href="#" target="_blank" rel="noopener" data-wa-service="JTAG boot repair">💬 Quote lein</a>
+        </div>
+      </article>
+      <article class="svc2-card reveal">
+        <img src="images/repair-emmc.jpg" alt="EMMC chip programming">
+        <div class="svc2-body">
+          <h4>💿 EMMC / UFS Chip Work</h4>
+          <p>Memory chip ki programming, health check aur replacement — kharab chip se data nikalna ho ya phone zinda karna ho.</p>
+          <div class="svc-chips"><span>EMMC Programming</span><span>UFS Programming</span><span>Chip Replacement</span><span>Health Check</span><span>Data Extraction</span></div>
+          <a class="btn btn-whatsapp btn-sm" href="#" target="_blank" rel="noopener" data-wa-service="EMMC / UFS chip work">💬 Quote lein</a>
+        </div>
+      </article>
+      <article class="svc2-card reveal">
+        <img src="images/repair-care.jpg" alt="Dead and water damaged phone care">
+        <div class="svc2-body">
+          <h4>💧 Dead &amp; Water-Damaged Phones</h4>
+          <p>Pani gir gaya ya phone achanak band ho gaya? Fori ultrasonic safai aur chip-level diagnosis — umeed khatam samajhne se pehle hum se zaroor poochein.</p>
+          <div class="svc-chips"><span>Water Damage Care</span><span>Ultrasonic Cleaning</span><span>Dead Phone Diagnosis</span><span>Short Circuit Fix</span></div>
+          <a class="btn btn-whatsapp btn-sm" href="#" target="_blank" rel="noopener" data-wa-service="Dead / water-damaged phone repair">💬 Quote lein</a>
+        </div>
+      </article>
+    </div>
+
+    <h3 class="repair-h reveal">📲 Brands We Repair</h3>
+    <div class="brand-chips reveal">
+      <span>Apple iPhone</span><span>Samsung</span><span>Infinix</span><span>Tecno</span><span>Xiaomi / Redmi</span>
+      <span>Vivo</span><span>Oppo</span><span>Realme</span><span>OnePlus</span><span>Google Pixel</span>
+      <span>Huawei / Honor</span><span>Nokia</span><span>Itel</span><span>Sparx</span>
+    </div>
+
+    <h3 class="repair-h reveal">🪜 Kaise Kaam Hota Hai?</h3>
+    <div class="steps-row reveal">
+      <div class="step-card"><span class="step-num">1</span><strong>Book Your Repair</strong><p class="muted small">WhatsApp, call ya dukaan par aa kar repair book karwayein.</p></div>
+      <div class="step-card"><span class="step-num">2</span><strong>Diagnosis &amp; Quote</strong><p class="muted small">Phone check karke pehle saaf qeemat batayi jati hai — koi kaam aap ki marzi ke baghair nahi.</p></div>
+      <div class="step-card"><span class="step-num">3</span><strong>Repair &amp; Pickup</strong><p class="muted small">Zyada tar repairs usi din — warranty ke saath phone wapas lein.</p></div>
+    </div>
+
+    <div class="why-grid reveal">
+      <div class="why-card">🎓<strong>Expert Technicians</strong><p class="muted small">Chip-level repairing ke certified specialists.</p></div>
+      <div class="why-card">💎<strong>Genuine Parts</strong><p class="muted small">Original quality parts — performance bilkul new jaisi.</p></div>
+      <div class="why-card">⚡<strong>Fast Turnaround</strong><p class="muted small">Aksar repairs 30–60 minute mein, warna usi din.</p></div>
+      <div class="why-card">🛡️<strong>Warranty on Repairs</strong><p class="muted small">Parts aur labour par warranty — be-fikr rahen.</p></div>
+    </div>
+
+    <div class="narrow" id="trackAnchor">
+      <h3 class="repair-h">🔎 Track Your Repair</h3>
+      <p class="muted">Enter your <strong>Job ID</strong> (e.g. REP-1001) and the <strong>email / phone number</strong> you gave at the shop
+        <em>or</em> your <strong>portal password</strong> from the job slip / email.</p>
+      <form id="trackForm" class="card-form">
+        <label>Job ID <input id="trJobId" required placeholder="REP-1001" autocomplete="off"></label>
+        <label>Email / Phone Number <input id="trEmail" type="text" placeholder="you@example.com ya 03xx-xxxxxxx" autocomplete="username"></label>
+        <div class="or-divider">— or —</div>
+        <label>Portal Password <input id="trPass" placeholder="e.g. SM-123456" autocomplete="off"></label>
+        <p class="form-error" id="trError" hidden></p>
+        <button class="btn btn-primary btn-block" id="trBtn" type="submit">Track my repair</button>
+        <p class="small muted" style="margin:.7rem 0 0">
+          <a href="#" id="trForgotLink">🔑 Portal password bhool gaye? Recover karein</a>
+        </p>
+      </form>
+      <form id="recoverForm" class="card-form" hidden style="margin-top:1rem">
+        <h3 style="margin-top:0">🔑 Forgot Portal Password</h3>
+        <p class="muted small">Apna <strong>Job ID</strong> aur wahi <strong>email ya phone number</strong> likhein jo dukaan par diya tha —
+          aap ka portal password aap ki <strong>email par bhej</strong> diya jayega.</p>
+        <label>Job ID <input id="rcJobId" placeholder="REP-1001" autocomplete="off"></label>
+        <label>Email / Phone Number <input id="rcId" type="text" placeholder="you@example.com ya 03xx-xxxxxxx" autocomplete="username"></label>
+        <p class="form-error" id="rcError" hidden></p>
+        <p class="success-text" id="rcOk" hidden></p>
+        <button class="btn btn-primary btn-block" id="rcBtn" type="submit">📧 Password email par bhejein</button>
+      </form>
+      <div id="trResult" hidden>
+        <div class="step-tracker" id="trSteps"></div>
+        <div class="track-meta" id="trMeta"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= VIEW: ACCOUNT ================= -->
+  <section class="view narrow" id="viewAccount" hidden>
+    <h2>👤 My Account</h2>
+    <div id="accLoginPrompt" hidden>
+      <p class="muted">Please log in to see your profile, tier progress and orders.</p>
+      <button class="btn btn-primary" id="accLoginBtn" type="button">Login / Register</button>
+    </div>
+    <div id="accContent" hidden>
+      <div class="account-card">
+        <img class="account-photo" id="accPhoto" alt="" hidden>
+        <div>
+          <h3 id="accName"></h3>
+          <p class="muted" id="accEmail"></p>
+          <p class="muted" id="accPhone"></p>
+          <span class="tier-pill" id="accTier"></span>
+        </div>
+        <button class="btn btn-ghost" id="logoutBtn" type="button">Logout</button>
+      </div>
+      <div class="target-track big"><div class="target-fill" id="accTargetFill"></div></div>
+      <p class="muted" id="accTargetText"></p>
+
+      <h3>🧾 My Orders</h3>
+      <div id="accOrders"></div>
+    </div>
+  </section>
+</main>
+
+<!-- ================= FOOTER ================= -->
+<footer class="site-footer">
+  <div class="footer-inner">
+    <div>
+      <strong>Sulehri Mobile</strong>
+      <p class="muted">Phones · Parts · Accessories · Repairs<br>Address: Your shop address here<br>Timings: 10 AM – 10 PM</p>
+    </div>
+    <a class="btn btn-whatsapp" id="waLink" href="#" target="_blank" rel="noopener">💬 Chat on WhatsApp</a>
+    <a class="btn btn-ghost" href="admin/admin.html">🔐 Staff Login</a>
+  </div>
+  <p class="muted small">© Sulehri Mobile. Prices include your account tier where applicable.</p>
+</footer>
+
+<!-- ================= BOTTOM NAV (mobile) ================= -->
+<nav class="bottom-nav" aria-label="Main">
+  <button type="button" data-nav="home" class="nav-item active"><span>🏠</span>Home</button>
+  <button type="button" data-nav="categories" class="nav-item"><span>🗂️</span>Categories</button>
+  <button type="button" data-nav="search" class="nav-item"><span>🔍</span>Search</button>
+  <button type="button" data-nav="cart" class="nav-item"><span>🛒</span>Cart<b class="nav-badge" id="navCartBadge" hidden>0</b></button>
+  <button type="button" data-nav="account" class="nav-item"><span>👤</span>Account</button>
+</nav>
+
+<!-- ================= QUICK VIEW MODAL ================= -->
+<div class="modal" id="quickViewModal" hidden>
+  <div class="modal-card">
+    <button class="icon-btn modal-close" id="qvClose" type="button" aria-label="Close">✕</button>
+    <div class="qv-media">
+      <div class="qv-frame"><img id="qvImg" alt=""></div>
+      <div class="qv-thumbs" id="qvThumbs"></div>
+    </div>
+    <div class="qv-body">
+      <span class="brand-tag" id="qvBrand"></span>
+      <h3 id="qvTitle"></h3>
+      <div class="spec-pills" id="qvSpecs"></div>
+      <p class="qv-warranty" id="qvWarranty"></p>
+      <p class="qv-stock" id="qvStock"></p>
+      <div class="price-row">
+        <span class="price" id="qvPrice"></span>
+        <span class="compare-price" id="qvCompare"></span>
+        <span class="discount-pill" id="qvDiscount" hidden></span>
+      </div>
+      <div class="qv-actions">
+        <div class="qty-stepper">
+          <button type="button" id="qvQtyMinus" aria-label="Decrease quantity">−</button>
+          <span id="qvQty">1</span>
+          <button type="button" id="qvQtyPlus" aria-label="Increase quantity">+</button>
+        </div>
+        <button class="btn btn-primary grow" id="qvAddBtn" type="button">🛒 Add to Cart</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= CART DRAWER ================= -->
+<div class="drawer-scrim" id="cartScrim" hidden></div>
+<aside class="cart-drawer" id="cartDrawer" hidden aria-label="Cart">
+  <div class="cart-head">
+    <h3>🛒 Your Cart</h3>
+    <button class="icon-btn" id="closeCartBtn" type="button" aria-label="Close cart">✕</button>
+  </div>
+  <div class="cart-items" id="cartItems"></div>
+  <div class="cart-foot">
+    <div class="cart-total">Subtotal <strong id="cartSubtotal">PKR 0</strong></div>
+    <button class="btn btn-primary btn-block" id="checkoutBtn" type="button">Checkout →</button>
+  </div>
+</aside>
+
+<!-- ================= CHECKOUT MODAL ================= -->
+<div class="modal" id="checkoutModal" hidden>
+  <div class="modal-card small-card">
+    <button class="icon-btn modal-close" id="coClose" type="button" aria-label="Close">✕</button>
+    <h3>✅ Checkout</h3>
+    <div id="coFormWrap">
+      <p class="muted" id="coCustomer"></p>
+      <div class="co-lines" id="coLines"></div>
+      <div class="cart-total">Total <strong id="coTotal">PKR 0</strong></div>
+      <label>Payment Method
+        <select id="coPayment">
+          <option>Cash</option>
+          <option>Bank</option>
+          <option>EasyPaisa-JazzCash</option>
+          <option>Credit</option>
+        </select>
+      </label>
+      <label>Notes (optional)
+        <input id="coNotes" placeholder="Delivery address / any note">
+      </label>
+      <p class="form-error" id="coError" hidden></p>
+      <button class="btn btn-primary btn-block" id="coSubmit" type="button">Place Order</button>
+    </div>
+    <div id="coSuccess" hidden>
+      <p class="success-big">🎉 Order placed!</p>
+      <p>Your Order ID is <strong id="coOrderId"></strong>.<br>We will contact you to confirm. You can see it in <strong>My Account → My Orders</strong>.</p>
+      <button class="btn btn-primary btn-block" id="coDoneBtn" type="button">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= AUTH MODAL ================= -->
+<div class="modal" id="authModal" hidden>
+  <div class="modal-card small-card">
+    <button class="icon-btn modal-close" id="authClose" type="button" aria-label="Close">✕</button>
+    <div class="auth-tabs">
+      <button type="button" id="tabLogin" class="auth-tab active">Login</button>
+      <button type="button" id="tabRegister" class="auth-tab">Register</button>
+    </div>
+
+    <form id="loginForm">
+      <label>Email <input id="liEmail" type="email" required autocomplete="email" placeholder="you@example.com"></label>
+      <label>Password <input id="liPassword" type="password" required autocomplete="current-password" placeholder="••••••••"></label>
+      <p class="form-error" id="liError" hidden></p>
+      <button class="btn btn-primary btn-block" type="submit">Login</button>
+      <p class="muted small" id="demoHint" hidden>Demo account: <code>demo@sulehri.pk</code> / <code>demo123</code> (any password also works in demo).</p>
+    </form>
+
+    <form id="registerForm" hidden>
+      <label>Full Name <input id="rgName" required autocomplete="name" placeholder="Your name"></label>
+      <label>Email <input id="rgEmail" type="email" required autocomplete="email" placeholder="you@example.com"></label>
+      <label>Password (min 6 characters) <input id="rgPassword" type="password" required minlength="6" autocomplete="new-password"></label>
+      <label>Phone <input id="rgPhone" required autocomplete="tel" placeholder="03xx-xxxxxxx"></label>
+      <label>Reference (who referred you?) <input id="rgReference" placeholder="Optional"></label>
+      <label>Profile Photo (optional) <input id="rgPhoto" type="file" accept="image/*"></label>
+      <p class="form-error" id="rgError" hidden></p>
+      <button class="btn btn-primary btn-block" type="submit">Create Account</button>
+    </form>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toastWrap" aria-live="polite"></div>
+
+<script>window.SM_PAGE = { type: 'cat', main: 'Accessories' };</script>
+<script src="app.js"></script>
+</body>
+</html>
