@@ -278,3 +278,26 @@ tr.low-stock:hover td{background:#FFEDD5}
 .photo-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 10px 0; }
 .photo-pick { background: #e8eefb; color: #0B2A5B; font-weight: 700; padding: 9px 14px; border-radius: 999px; cursor: pointer; }
 .photo-pick input { display: none; }
+
+/* ===== Settings Builder (step-by-step, 3 columns) ===== */
+.builder-wrap { display: flex; flex-direction: column; gap: 1rem; }
+.builder-step1 { background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow-sm); padding: .9rem 1rem; }
+.builder-steplabel { display: block; font-family: var(--font-head); font-weight: 800; font-size: 1.02rem; color: var(--navy); margin: 0 0 .55rem; }
+.builder-step1-row { display: flex; gap: .6rem; flex-wrap: wrap; }
+.builder-select { flex: 1 1 320px; width: auto; font-weight: 600; }
+.builder-step1 p { margin: .55rem 0 0; }
+.builder-cols { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; align-items: start; }
+@media(max-width: 900px) { .builder-cols { grid-template-columns: 1fr; } }
+.builder-col { background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow-sm); padding: .8rem .9rem 1rem; min-height: 220px; }
+.builder-col h4 { margin: -.8rem -.9rem .75rem; padding: .6rem .9rem; background: var(--navy); color: #fff; border-radius: var(--radius) var(--radius) 0 0; font-size: .95rem; }
+.b-row { display: flex; align-items: center; gap: .45rem; border: 1px solid var(--line); border-radius: 12px; padding: .4rem .6rem; margin-bottom: .45rem; background: var(--white); }
+.b-row .grow { font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.b-row .icon-btn { min-width: 36px; min-height: 36px; padding: .25rem .45rem; border-radius: 10px; font-size: .95rem; }
+.b-sel { cursor: pointer; }
+.b-sel:hover { border-color: var(--blue); }
+.b-row.selected { border-color: var(--navy); background: #EFF6FF; box-shadow: inset 3px 0 0 var(--navy); }
+.b-add { display: flex; gap: .5rem; margin-top: .7rem; }
+.b-add input { flex: 1; }
+.b-hint { color: var(--slate); text-align: center; padding: 1.1rem .5rem; margin: 0; }
+.b-note { margin-top: .7rem; }
+.b-info p { margin: .3rem 0; }

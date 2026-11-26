@@ -359,16 +359,25 @@
       <section id="mod-settings" class="module" hidden>
         <p class="muted">No-code manager: add, rename, delete or reorder the dropdown values and homepage sections used by the whole system — no code editing needed. Changes save straight to the Settings sheet.</p>
         <p class="note-box">📌 <b>Table columns:</b> you can safely move, rename-free reorder, or resize columns inside Google Sheets — the backend finds every column <b>by its header name</b>, never by column letter, so reordering columns cannot break the system. (Please do not rename a header itself.)</p>
-        <div id="catTreeWrap" class="cat-tree-wrap"></div>
-        <div class="settings-grid">
-          <div class="group-pane">
-            <button type="button" class="btn btn-primary btn-sm" id="setNewListBtn">➕ New Dropdown List</button>
-            <p class="small muted set-newlist-note">New lists appear here instantly. Ask me in chat to attach a list to any form or page.</p>
-            <div id="setGroupList" class="group-list"></div>
+        <div class="builder-wrap">
+          <div class="builder-step1">
+            <label class="builder-steplabel" for="bMode">STEP 1 — Page / List Chunein</label>
+            <div class="builder-step1-row">
+              <select id="bMode" class="builder-select">
+                <option value="categories">🏷️ Categories — Main → Sub → Mazeed</option>
+                <option value="page-mobile">📱 Mobile Page ke Dropdowns</option>
+                <option value="page-parts">🔧 Parts Page ke Dropdowns</option>
+                <option value="page-accessories">🎧 Accessories Page ke Dropdowns</option>
+                <option value="all">📋 Baqi Saari Lists</option>
+              </select>
+              <button type="button" class="btn btn-primary" id="bNewListBtn">➕ Nayi List Banayein</button>
+            </div>
+            <p class="small muted">Step 1 mein list chunein, phir neeche columns mein us ki values add / rename / delete karein. Har change khud save ho jata hai.</p>
           </div>
-          <div class="card">
-            <h3 id="setGroupTitle">Choose a list</h3>
-            <div id="setValuesWrap"></div>
+          <div class="builder-cols" id="bCols">
+            <div class="builder-col"><h4 id="bCol1Title">STEP 2</h4><div id="bCol1"></div></div>
+            <div class="builder-col"><h4 id="bCol2Title">STEP 3</h4><div id="bCol2"></div></div>
+            <div class="builder-col"><h4 id="bCol3Title">STEP 4</h4><div id="bCol3"></div></div>
           </div>
         </div>
       </section>

@@ -161,7 +161,7 @@ const state = {
   token: '', user: null, module: 'dashboard',
   lists: JSON.parse(JSON.stringify(FALLBACK_LISTS)),
   settingsAll: {},            // {Group:[{value,order,notes}]} from getSettingsAll
-  settingsGroup: '',          // currently open group in Settings Manager
+  settingsGroup: '',          // (legacy — Settings Builder ab bState istemal karta hai)
   products: [], customers: [], orders: [], repairs: [], returns: [],
   expenses: [], banners: [], users: [], warranty: [], ledger: [],
   pnl: null,
@@ -2130,7 +2130,7 @@ async function loadWarranty() {
 /* ==================== 20. SETTINGS & LAYOUT MANAGER ===================== */
 const GROUP_LABELS = {
   Section_Order: '🏠 Homepage Section Order — use ↑ ↓ to change the order of sections on the website home page',
-  Main_Category: 'Main Categories', Sub_Category: 'Sub Categories', Brand: 'Brands',
+  Main_Category: 'Main Categories', Sub_Category: 'Sub Categories', Category_L3: 'Mazeed Categories (3rd Level)', Brand: 'Brands',
   RAM: 'RAM Options', Storage: 'Storage Options', PTA_Status: 'PTA Status Options',
   Network_Status: 'Network Status Options', Repair_Stage: 'Repair Stages',
   Customer_Comm_Status: 'Repair Communication Statuses', Product_Badge: 'Product Badges',
@@ -2147,111 +2147,29 @@ async function loadSettingsModule() {
     state.settingsAll = d.settings || {};
     applyListsFromSettings(state.settingsAll);
   } catch (e) { toast(e.message, 'error'); }
-  const groups = Object.keys(state.settingsAll);
-  if (!state.settingsGroup || groups.indexOf(state.settingsGroup) === -1) {
-    state.settingsGroup = groups.indexOf('Section_Order') > -1 ? 'Section_Order' : (groups[0] || '');
+  const modeSel = $('bMode');
+  if (modeSel && !modeSel.getAttribute('data-wired')) {
+    modeSel.setAttribute('data-wired', '1');
+    modeSel.addEventListener('change', () => { bState.mode = modeSel.value; renderBuilder(); });
   }
-  const nlBtn = $('setNewListBtn');
+  const nlBtn = $('bNewListBtn');
   if (nlBtn && !nlBtn.getAttribute('data-wired')) {
     nlBtn.setAttribute('data-wired', '1');
     nlBtn.addEventListener('click', createSettingsList);
   }
-  renderSettingsGroups();
-  renderSettingsValues();
-  renderCategoryTree();
-}
-function renderSettingsGroups() {
-  $('setGroupList').innerHTML = Object.keys(state.settingsAll).map(g =>
-    '<button type="button" class="group-item' + (g === state.settingsGroup ? ' active' : '') +
-    '" data-group="' + esc(g) + '">' + esc(g.replace(/_/g, ' ')) +
-    ' <span class="muted small">(' + (state.settingsAll[g] || []).length + ')</span></button>').join('');
-  $('setGroupList').querySelectorAll('[data-group]').forEach(b => b.addEventListener('click', () => {
-    state.settingsGroup = b.getAttribute('data-group');
-    renderSettingsGroups(); renderSettingsValues();
-  }));
+  const cols = $('bCols');
+  if (cols && !cols.getAttribute('data-wired')) {
+    cols.setAttribute('data-wired', '1');
+    cols.addEventListener('click', builderClick_);
+  }
+  builderValidate_();
+  renderBuilder();
 }
 function settingsRows(group) {
   return (state.settingsAll[group] || []).slice().sort((a, b) => num(a.order) - num(b.order));
 }
-function renderSettingsValues() {
-  const group = state.settingsGroup;
-  const wrap = $('setValuesWrap');
-  if (!group) { wrap.innerHTML = '<p class="empty-msg">No settings loaded.</p>'; return; }
-  $('setGroupTitle').textContent = GROUP_LABELS[group] || group.replace(/_/g, ' ');
-  const readOnly = group === 'Drive_Folder' || group === 'System';
-  const rows = settingsRows(group);
-  let h = rows.map((r, i) =>
-    '<div class="set-row"><span class="grow">' + esc(r.value) + (r.notes ? ' <span class="muted small">— ' + esc(r.notes) + '</span>' : '') + '</span>' +
-    (readOnly ? '' :
-      '<button type="button" class="btn btn-ghost btn-sm" data-set-up="' + i + '" ' + (i === 0 ? 'disabled' : '') + '>↑</button>' +
-      '<button type="button" class="btn btn-ghost btn-sm" data-set-down="' + i + '" ' + (i === rows.length - 1 ? 'disabled' : '') + '>↓</button>' +
-      '<button type="button" class="btn btn-ghost btn-sm icon-btn" title="Rename" aria-label="Rename" data-set-rename="' + i + '">✏️</button>' +
-      '<button type="button" class="btn btn-danger btn-sm icon-btn" title="Delete" aria-label="Delete" data-set-del="' + i + '">🗑</button>') +
-    '</div>').join('');
-  if (!readOnly && can('saveSetting')) {
-    h += '<div class="set-add"><input id="setNewValue" type="text" placeholder="Add a new value to ' + esc(group.replace(/_/g, ' ')) + '…">' +
-      '<button type="button" class="btn btn-primary" id="setAddBtn">➕ Add</button></div>';
-  }
-  if (readOnly) h += '<p class="small muted">This group is managed by the system (Setup.gs / triggers) and is shown for information only.</p>';
-  wrap.innerHTML = h || '<p class="empty-msg">This list is empty.</p>';
-  const reorder = async newRows => {
-    try {
-      await queueWrite('saveSetting', { op: 'reorder', Group: group, Values: newRows.map(r => r.value) });
-      state.settingsAll[group] = newRows.map((r, i) => Object.assign({}, r, { order: i + 1 }));
-      applyListsFromSettings(state.settingsAll);
-      renderSettingsValues();
-      renderCategoryTree();
-      toast('Order saved.', 'success');
-    } catch (e) { /* queue toasted */ }
-  };
-  wrap.querySelectorAll('[data-set-up]').forEach(b => b.addEventListener('click', () => {
-    const i = num(b.getAttribute('data-set-up'));
-    const arr = settingsRows(group);
-    const tmp = arr[i - 1]; arr[i - 1] = arr[i]; arr[i] = tmp;
-    reorder(arr);
-  }));
-  wrap.querySelectorAll('[data-set-down]').forEach(b => b.addEventListener('click', () => {
-    const i = num(b.getAttribute('data-set-down'));
-    const arr = settingsRows(group);
-    const tmp = arr[i + 1]; arr[i + 1] = arr[i]; arr[i] = tmp;
-    reorder(arr);
-  }));
-  wrap.querySelectorAll('[data-set-rename]').forEach(b => b.addEventListener('click', async () => {
-    const i = num(b.getAttribute('data-set-rename'));
-    const row = settingsRows(group)[i];
-    const nv = prompt('Rename "' + row.value + '" to:', row.value);
-    if (!nv || nv.trim() === row.value) return;
-    try {
-      await queueWrite('saveSetting', { op: 'rename', Group: group, Value: row.value, NewValue: nv.trim() });
-      toast('Renamed.', 'success');
-      loadSettingsModule();
-    } catch (e) {}
-  }));
-  wrap.querySelectorAll('[data-set-del]').forEach(b => b.addEventListener('click', async () => {
-    const i = num(b.getAttribute('data-set-del'));
-    const row = settingsRows(group)[i];
-    if (!confirm('Delete "' + row.value + '" from ' + group + '?\n\nProducts/jobs that already use this value keep it in their history, but it will disappear from dropdowns.')) return;
-    try {
-      await queueWrite('saveSetting', { op: 'delete', Group: group, Value: row.value });
-      toast('Deleted.', 'success');
-      loadSettingsModule();
-    } catch (e) {}
-  }));
-  const addBtn = document.getElementById('setAddBtn');
-  if (addBtn) addBtn.addEventListener('click', async () => {
-    const input = document.getElementById('setNewValue');
-    const v = input.value.trim();
-    if (!v) { toast('Type a value first.', 'error'); return; }
-    input.value = '';
-    try {
-      await queueWrite('saveSetting', { op: 'add', Group: group, Value: v });
-      toast('Added "' + v + '".', 'success');
-      loadSettingsModule();
-    } catch (e) {}
-  });
-}
 
-/* ---------- Category Tree + new dropdown lists (Settings redesign) ---------- */
+/* ---------- Settings helpers: sub-category parents + rename/delete ---------- */
 const SUB_PARENT_DEFAULTS = {
   'New Phones': 'Phones', 'Box Pack Phones': 'Phones', 'Used Phones': 'Phones', 'Mobile Phones': 'Phones',
   'Units': 'Parts', 'Sub-boards': 'Parts', 'Strips': 'Parts', 'OCA Glass': 'Parts',
@@ -2283,113 +2201,239 @@ async function settingsDeleteConfirm_(group, value) {
     loadSettingsModule();
   } catch (e) {}
 }
-function renderCategoryTree() {
-  const wrap = $('catTreeWrap');
-  if (!wrap) return;
+
+/* ==================== Step-by-step Settings Builder ======================
+   STEP 1: Page / List select → STEP 2/3/4: teen columns ek line mein.
+   Categories mode: Main Category → Sub Category → Mazeed (Category_L3).
+   Page modes + Baqi Lists: pehle list chunein, phir us ki values.        */
+let bState = { mode: 'categories', main: '', sub: '', group: '' };
+const BUILDER_PAGE_LISTS = {
+  'page-mobile': ['Sub_Category', 'Brand', 'RAM', 'Storage', 'PTA_Status', 'Network_Status'],
+  'page-parts': ['Sub_Category', 'Brand'],
+  'page-accessories': ['Sub_Category', 'Brand']
+};
+const BUILDER_PAGE_INFO = {
+  'page-mobile': 'Mobile page ke filters aur product form mein.',
+  'page-parts': 'Parts page ke filters aur product form mein.',
+  'page-accessories': 'Accessories page ke filters aur product form mein.'
+};
+function groupLabel_(g) { return GROUP_LABELS[g] || String(g).replace(/_/g, ' '); }
+function builderMainSet_() {
+  const s = {};
+  settingsRows('Main_Category').forEach(m => { s[m.value] = 1; });
+  return s;
+}
+function builderProductMap_() {
+  const map = {};
+  (state.products || []).forEach(p => {
+    if (p && p.Sub_Category && p.Main_Category && !map[p.Sub_Category]) map[p.Sub_Category] = p.Main_Category;
+  });
+  return map;
+}
+function builderSubItems_(main) {
+  // main === '__none__' → wo subs jin ki koi Main Category nahi (unassigned)
+  const subs = settingsRows('Sub_Category');
+  const ms = builderMainSet_();
+  const pm = builderProductMap_();
+  const out = [];
+  subs.forEach((r, gi) => {
+    const p = subParent_(r, pm, ms);
+    if (main === '__none__' ? !p : p === main) out.push({ row: r, gi: gi });
+  });
+  return out;
+}
+function builderValidate_() {
+  const mains = settingsRows('Main_Category');
+  if (bState.main && bState.main !== '__none__' && !mains.some(m => m.value === bState.main)) { bState.main = ''; bState.sub = ''; }
+  if (bState.main && bState.sub) {
+    if (!builderSubItems_(bState.main).some(it => it.row.value === bState.sub)) bState.sub = '';
+  }
+  if (!bState.main) bState.sub = '';
+  if (bState.group && !state.settingsAll[bState.group]) bState.group = '';
+}
+function bActionBtns_(group, item, items, li, canEdit) {
+  if (!canEdit) return '';
+  const upG = li > 0 ? items[li - 1].gi : -1;
+  const dnG = li < items.length - 1 ? items[li + 1].gi : -1;
+  return '<button type="button" class="btn btn-ghost btn-sm" data-b-swap="' + item.gi + ',' + upG + '" data-b-group="' + esc(group) + '" ' + (li === 0 ? 'disabled' : '') + '>↑</button>' +
+    '<button type="button" class="btn btn-ghost btn-sm" data-b-swap="' + item.gi + ',' + dnG + '" data-b-group="' + esc(group) + '" ' + (li === items.length - 1 ? 'disabled' : '') + '>↓</button>' +
+    '<button type="button" class="btn btn-ghost btn-sm icon-btn" title="Rename" aria-label="Rename" data-b-rename="' + esc(item.row.value) + '" data-b-group="' + esc(group) + '">✏️</button>' +
+    '<button type="button" class="btn btn-danger btn-sm icon-btn" title="Delete" aria-label="Delete" data-b-del="' + esc(item.row.value) + '" data-b-group="' + esc(group) + '">🗑</button>';
+}
+function bValueRowsHtml_(group, items, canEdit, hideNotes) {
+  return items.map((item, li) =>
+    '<div class="b-row"><span class="grow">' + esc(item.row.value) +
+    (!hideNotes && item.row.notes ? ' <span class="muted small">— ' + esc(item.row.notes) + '</span>' : '') + '</span>' +
+    bActionBtns_(group, item, items, li, canEdit) + '</div>').join('');
+}
+function bSelRow_(kind, group, item, items, li, selected, canEdit, extraLabel) {
+  return '<div class="b-row b-sel' + (selected ? ' selected' : '') + '" data-b-sel="' + kind + '" data-b-value="' + esc(item.row.value) + '">' +
+    '<span class="grow">' + esc(item.row.value) + (extraLabel || '') + '</span>' +
+    bActionBtns_(group, item, items, li, canEdit) + '</div>';
+}
+function bAddHtml_(group, placeholder, notes) {
+  return '<div class="b-add"><input type="text" placeholder="' + esc(placeholder) + '">' +
+    '<button type="button" class="btn btn-primary btn-sm" data-b-add="' + esc(group) + '"' +
+    (notes ? ' data-b-notes="' + esc(notes) + '"' : '') + '>➕ Add</button></div>';
+}
+async function builderReorder_(group, arr) {
+  try {
+    await queueWrite('saveSetting', { op: 'reorder', Group: group, Values: arr.map(r => r.value) });
+    state.settingsAll[group] = arr.map((r, i) => Object.assign({}, r, { order: i + 1 }));
+    applyListsFromSettings(state.settingsAll);
+    toast('Order saved.', 'success');
+    renderBuilder();
+  } catch (e) { /* queue toasted */ }
+}
+function builderSwap_(group, gi, gj) {
+  if (gj < 0 || gi === gj) return;
+  const arr = settingsRows(group);
+  if (!arr[gi] || !arr[gj]) return;
+  const tmp = arr[gi]; arr[gi] = arr[gj]; arr[gj] = tmp;
+  builderReorder_(group, arr);
+}
+async function builderAdd_(btn) {
+  const input = btn.parentElement ? btn.parentElement.querySelector('input') : null;
+  const v = input ? input.value.trim() : '';
+  if (!v) { toast('Pehle value likhein.', 'error'); return; }
+  const payload = { op: 'add', Group: btn.getAttribute('data-b-add'), Value: v };
+  const notes = btn.getAttribute('data-b-notes');
+  if (notes) payload.Notes = notes;
+  try {
+    await queueWrite('saveSetting', payload);
+    toast('Added "' + v + '".', 'success');
+    loadSettingsModule();
+  } catch (e) {}
+}
+function builderClick_(e) {
+  const t = e.target;
+  if (!t || !t.closest) return;
+  const swap = t.closest('[data-b-swap]');
+  if (swap) {
+    const p = String(swap.getAttribute('data-b-swap')).split(',');
+    builderSwap_(swap.getAttribute('data-b-group'), num(p[0]), num(p[1]));
+    return;
+  }
+  const ren = t.closest('[data-b-rename]');
+  if (ren) { settingsRenamePrompt_(ren.getAttribute('data-b-group'), ren.getAttribute('data-b-rename')); return; }
+  const del = t.closest('[data-b-del]');
+  if (del) { settingsDeleteConfirm_(del.getAttribute('data-b-group'), del.getAttribute('data-b-del')); return; }
+  const add = t.closest('[data-b-add]');
+  if (add) { builderAdd_(add); return; }
+  const sel = t.closest('[data-b-sel]');
+  if (sel) {
+    const kind = sel.getAttribute('data-b-sel');
+    const val = sel.getAttribute('data-b-value');
+    if (kind === 'main') { bState.main = val; bState.sub = ''; }
+    else if (kind === 'sub') { bState.sub = val; }
+    else if (kind === 'group') { bState.group = val; }
+    renderBuilder();
+  }
+}
+function renderBuilder() {
+  const c1 = $('bCol1'), c2 = $('bCol2'), c3 = $('bCol3');
+  if (!c1 || !c2 || !c3) return;
+  const modeSel = $('bMode');
+  if (modeSel && modeSel.value !== bState.mode) modeSel.value = bState.mode;
+  if (bState.mode === 'categories') renderBuilderCategories_(c1, c2, c3);
+  else if (BUILDER_PAGE_LISTS[bState.mode]) renderBuilderPage_(c1, c2, c3);
+  else renderBuilderAll_(c1, c2, c3);
+}
+function renderBuilderCategories_(c1, c2, c3) {
   const canEdit = can('saveSetting');
   const mains = settingsRows('Main_Category');
-  const subs = settingsRows('Sub_Category');
-  const mainSet = {};
-  mains.forEach(m => { mainSet[m.value] = 1; });
-  const productMap = {};
-  (state.products || []).forEach(p => {
-    if (p && p.Sub_Category && p.Main_Category && !productMap[p.Sub_Category]) productMap[p.Sub_Category] = p.Main_Category;
-  });
-  const byParent = {};
-  const unassigned = [];
-  subs.forEach((r, gi) => {
-    const parent = subParent_(r, productMap, mainSet);
-    if (parent) (byParent[parent] = byParent[parent] || []).push({ row: r, gi: gi });
-    else unassigned.push({ row: r, gi: gi });
-  });
-  const subRowsHtml = items => items.map((item, li) => {
-    const upPair = item.gi + ',' + (li > 0 ? items[li - 1].gi : -1);
-    const dnPair = item.gi + ',' + (li < items.length - 1 ? items[li + 1].gi : -1);
-    return '<div class="set-row cat-sub-row"><span class="grow">' + esc(item.row.value) + '</span>' +
-      (canEdit ?
-        '<button type="button" class="btn btn-ghost btn-sm" data-cat-up="' + upPair + '" ' + (li === 0 ? 'disabled' : '') + '>↑</button>' +
-        '<button type="button" class="btn btn-ghost btn-sm" data-cat-down="' + dnPair + '" ' + (li === items.length - 1 ? 'disabled' : '') + '>↓</button>' +
-        '<button type="button" class="btn btn-ghost btn-sm icon-btn" title="Rename" aria-label="Rename" data-cat-rename="' + item.gi + '">✏️</button>' +
-        '<button type="button" class="btn btn-danger btn-sm icon-btn" title="Delete" aria-label="Delete" data-cat-del="' + item.gi + '">🗑</button>' : '') +
-      '</div>';
-  }).join('');
-  const cardHtml = (title, items, parentForAdd, isGeneral) => {
-    let h = '<div class="cat-card"><div class="cat-card-head"><span class="grow">' +
-      (isGeneral ? '📌 <b>General / Unassigned</b>' : '🌳 <b>' + esc(title) + '</b>') +
-      ' <span class="muted small">(' + items.length + ' sub categories)</span></span>';
-    if (!isGeneral && canEdit) {
-      h += '<button type="button" class="btn btn-ghost btn-sm icon-btn" title="Rename" aria-label="Rename" data-cat-main-rename="' + esc(title) + '">✏️</button>' +
-        '<button type="button" class="btn btn-danger btn-sm icon-btn" title="Delete" aria-label="Delete" data-cat-main-del="' + esc(title) + '">🗑</button>';
-    }
-    h += '</div>' + subRowsHtml(items);
-    if (canEdit) {
-      h += '<div class="set-add"><input type="text" placeholder="Add a sub category' + (isGeneral ? '…' : ' under ' + esc(title) + '…') + '">' +
-        '<button type="button" class="btn btn-primary btn-sm" data-cat-add-btn="' + esc(parentForAdd) + '">➕ Add</button></div>';
-    }
-    return h + '</div>';
-  };
-  let h = '<div class="cat-tree-head"><h3>🌳 Category Tree — Main Category ke neeche us ki Sub Categories</h3></div>';
-  if (canEdit) {
-    h += '<div class="set-add cat-add-main"><input id="catNewMain" type="text" placeholder="Add a new Main Category…">' +
-      '<button type="button" class="btn btn-primary" id="catAddMainBtn">➕ Add Main Category</button></div>';
+  const mainItems = mains.map((r, i) => ({ row: r, gi: i }));
+  $('bCol1Title').textContent = 'STEP 2 — Main Category';
+  let h = mainItems.map((item, li) =>
+    bSelRow_('main', 'Main_Category', item, mainItems, li, bState.main === item.row.value, canEdit,
+      ' <span class="muted small">(' + builderSubItems_(item.row.value).length + ' subs)</span>')).join('');
+  const unassigned = builderSubItems_('__none__');
+  if (unassigned.length) {
+    h += '<div class="b-row b-sel' + (bState.main === '__none__' ? ' selected' : '') + '" data-b-sel="main" data-b-value="__none__">' +
+      '<span class="grow">📌 General / Unassigned <span class="muted small">(' + unassigned.length + ' subs)</span></span></div>';
   }
-  mains.forEach(m => { h += cardHtml(m.value, byParent[m.value] || [], m.value, false); });
-  if (unassigned.length) h += cardHtml('', unassigned, '', true);
-  wrap.innerHTML = h;
-  wrap.querySelectorAll('[data-cat-main-rename]').forEach(b => b.addEventListener('click', () =>
-    settingsRenamePrompt_('Main_Category', b.getAttribute('data-cat-main-rename'))));
-  wrap.querySelectorAll('[data-cat-main-del]').forEach(b => b.addEventListener('click', () =>
-    settingsDeleteConfirm_('Main_Category', b.getAttribute('data-cat-main-del'))));
-  wrap.querySelectorAll('[data-cat-rename]').forEach(b => b.addEventListener('click', () => {
-    const row = settingsRows('Sub_Category')[num(b.getAttribute('data-cat-rename'))];
-    if (row) settingsRenamePrompt_('Sub_Category', row.value);
-  }));
-  wrap.querySelectorAll('[data-cat-del]').forEach(b => b.addEventListener('click', () => {
-    const row = settingsRows('Sub_Category')[num(b.getAttribute('data-cat-del'))];
-    if (row) settingsDeleteConfirm_('Sub_Category', row.value);
-  }));
-  const swapSubs = async pair => {
-    const parts = String(pair).split(',');
-    const gi = num(parts[0]), gj = num(parts[1]);
-    if (gj < 0) return;
-    const arr = settingsRows('Sub_Category');
-    if (!arr[gi] || !arr[gj]) return;
-    const tmp = arr[gi]; arr[gi] = arr[gj]; arr[gj] = tmp;
-    try {
-      await queueWrite('saveSetting', { op: 'reorder', Group: 'Sub_Category', Values: arr.map(r => r.value) });
-      toast('Order saved.', 'success');
-      loadSettingsModule();
-    } catch (e) { /* queue toasted */ }
-  };
-  wrap.querySelectorAll('[data-cat-up]').forEach(b => b.addEventListener('click', () => swapSubs(b.getAttribute('data-cat-up'))));
-  wrap.querySelectorAll('[data-cat-down]').forEach(b => b.addEventListener('click', () => swapSubs(b.getAttribute('data-cat-down'))));
-  wrap.querySelectorAll('[data-cat-add-btn]').forEach(b => b.addEventListener('click', async () => {
-    const parent = b.getAttribute('data-cat-add-btn');
-    const input = b.parentElement ? b.parentElement.querySelector('input') : null;
-    const v = input ? input.value.trim() : '';
-    if (!v) { toast('Type a value first.', 'error'); return; }
-    const payload = { op: 'add', Group: 'Sub_Category', Value: v };
-    if (parent) payload.Notes = 'Under: ' + parent;
-    try {
-      await queueWrite('saveSetting', payload);
-      toast('Added "' + v + '".', 'success');
-      loadSettingsModule();
-    } catch (e) {}
-  }));
-  const addMainBtn = document.getElementById('catAddMainBtn');
-  if (addMainBtn) addMainBtn.addEventListener('click', async () => {
-    const input = document.getElementById('catNewMain');
-    const v = input ? input.value.trim() : '';
-    if (!v) { toast('Type a value first.', 'error'); return; }
-    try {
-      await queueWrite('saveSetting', { op: 'add', Group: 'Main_Category', Value: v });
-      toast('Added "' + v + '".', 'success');
-      loadSettingsModule();
-    } catch (e) {}
+  if (!mainItems.length && !unassigned.length) h = '<p class="b-hint">Abhi koi Main Category nahi — neeche se add karein.</p>';
+  if (canEdit) h += bAddHtml_('Main_Category', 'Nayi Main Category likhein…', '');
+  c1.innerHTML = h;
+
+  $('bCol2Title').textContent = 'STEP 3 — Sub Categories' +
+    (bState.main === '__none__' ? ' (General)' : (bState.main ? ' of ' + bState.main : ''));
+  if (!bState.main) {
+    c2.innerHTML = '<p class="b-hint">👈 Pehle Step 2 se ek Main Category chunein</p>';
+  } else {
+    const items = builderSubItems_(bState.main);
+    let h2 = items.map((item, li) =>
+      bSelRow_('sub', 'Sub_Category', item, items, li, bState.sub === item.row.value, canEdit, '')).join('');
+    if (!items.length) h2 = '<p class="b-hint">Abhi is Main Category mein koi Sub Category nahi — neeche se add karein.</p>';
+    if (canEdit) h2 += bAddHtml_('Sub_Category', 'Nayi Sub Category likhein…', bState.main === '__none__' ? '' : 'Under: ' + bState.main);
+    c2.innerHTML = h2;
+  }
+
+  $('bCol3Title').textContent = 'STEP 4 — Mazeed Categories' + (bState.sub ? ' of ' + bState.sub : '');
+  if (!bState.sub) {
+    c3.innerHTML = '<p class="b-hint">👈 Pehle Step 3 se ek Sub Category chunein</p>';
+    return;
+  }
+  const items = [];
+  settingsRows('Category_L3').forEach((r, gi) => {
+    if (String(r.notes || '') === 'Under: ' + bState.sub) items.push({ row: r, gi: gi });
   });
+  let h3 = bValueRowsHtml_('Category_L3', items, canEdit, true);
+  if (!items.length) h3 = '<p class="b-hint">Abhi koi mazeed category nahi — neeche se add karein.</p>';
+  if (canEdit) h3 += bAddHtml_('Category_L3', 'Mazeed category likhein…', 'Under: ' + bState.sub);
+  c3.innerHTML = h3;
+}
+function renderBuilderGroupCol_(c2, c3, infoText) {
+  const group = bState.group;
+  $('bCol3Title').textContent = 'STEP 4 — Maloomat';
+  let info = '<div class="b-info"><p>👀 <b>Ye list website par kahan nazar aati hai</b></p>' +
+    '<p class="small">' + esc(infoText || '') + '</p>';
+  if (group === 'Sub_Category' && BUILDER_PAGE_LISTS[bState.mode]) {
+    info += '<p class="small">Is page par sirf is page ki categories ke products nazar aate hain.</p>';
+  }
+  c3.innerHTML = info + '</div>';
+  if (!group) {
+    $('bCol2Title').textContent = 'STEP 3 — List ki Values';
+    c2.innerHTML = '<p class="b-hint">👈 Pehle Step 2 se ek list chunein</p>';
+    return;
+  }
+  const readOnly = group === 'Drive_Folder' || group === 'System';
+  const canEdit = can('saveSetting') && !readOnly;
+  $('bCol2Title').textContent = 'STEP 3 — ' + groupLabel_(group);
+  const rows = settingsRows(group);
+  const items = rows.map((r, i) => ({ row: r, gi: i }));
+  let h = bValueRowsHtml_(group, items, canEdit, false);
+  if (!rows.length) h = '<p class="b-hint">Ye list abhi khaali hai — neeche se pehli value add karein.</p>';
+  if (group === 'Sub_Category') h += '<p class="small muted b-note">Note: Sub Categories ki Main Category ke saath jod 🏷️ Categories wale Step 1 se hoti hai.</p>';
+  if (readOnly) h += '<p class="small muted b-note">Ye list system chalata hai (Setup.gs / triggers) — sirf dekhne ke liye hai.</p>';
+  if (canEdit) h += bAddHtml_(group, 'Add a new value to ' + groupLabel_(group) + '…', '');
+  c2.innerHTML = h;
+}
+function renderBuilderPage_(c1, c2, c3) {
+  const groups = BUILDER_PAGE_LISTS[bState.mode] || [];
+  if (bState.group && groups.indexOf(bState.group) === -1) bState.group = '';
+  $('bCol1Title').textContent = 'STEP 2 — Is Page ke Dropdowns';
+  let h = groups.map(g =>
+    '<div class="b-row b-sel' + (bState.group === g ? ' selected' : '') + '" data-b-sel="group" data-b-value="' + esc(g) + '">' +
+    '<span class="grow">' + esc(groupLabel_(g)) + ' <span class="muted small">(' + (state.settingsAll[g] || []).length + ')</span></span></div>').join('');
+  h += '<p class="small muted b-note">Nayi list banani ho to upar ➕ Nayi List Banayein dabayein — wo 📋 Baqi Saari Lists mein milegi.</p>';
+  c1.innerHTML = h;
+  renderBuilderGroupCol_(c2, c3, BUILDER_PAGE_INFO[bState.mode]);
+}
+function renderBuilderAll_(c1, c2, c3) {
+  const skip = { Main_Category: 1, Sub_Category: 1, Category_L3: 1 };
+  const groups = Object.keys(state.settingsAll).filter(g => !skip[g]);
+  if (bState.group && (skip[bState.group] || groups.indexOf(bState.group) === -1)) bState.group = '';
+  $('bCol1Title').textContent = 'STEP 2 — Saari Lists';
+  let h = groups.map(g =>
+    '<div class="b-row b-sel' + (bState.group === g ? ' selected' : '') + '" data-b-sel="group" data-b-value="' + esc(g) + '">' +
+    '<span class="grow">' + esc(groupLabel_(g)) + ' <span class="muted small">(' + (state.settingsAll[g] || []).length + ')</span></span></div>').join('');
+  if (!groups.length) h = '<p class="b-hint">Abhi koi list nahi.</p>';
+  c1.innerHTML = h;
+  renderBuilderGroupCol_(c2, c3, 'Ye list system ke mukhtalif hisson mein dropdown ke tor par istemal hoti hai.');
 }
 async function createSettingsList() {
-  const name = prompt('New dropdown list ka naam likhein (e.g. Phone Condition):');
+  const name = prompt('Nayi dropdown list ka naam likhein (e.g. Phone Condition):');
   if (!name || !name.trim()) return;
   const key = name.trim().replace(/\s+/g, '_');
   if (state.settingsAll[key]) { toast('"' + key.replace(/_/g, ' ') + '" list pehle se mojood hai.', 'error'); return; }
@@ -2397,8 +2441,9 @@ async function createSettingsList() {
   if (!value || !value.trim()) return;
   try {
     await queueWrite('saveSetting', { op: 'add', Group: key, Value: value.trim() });
-    toast('New list "' + key.replace(/_/g, ' ') + '" ban gayi.', 'success');
-    state.settingsGroup = key;
+    toast('Nayi list "' + key.replace(/_/g, ' ') + '" ban gayi.', 'success');
+    bState.mode = 'all';
+    bState.group = key;
     loadSettingsModule();
   } catch (e) {}
 }
